@@ -21,6 +21,7 @@
 #include "phylosupertree.h"
 #include "parstree.h"
 #include "sprparsimony.h"
+#include <omp.h>
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
 
@@ -782,9 +783,13 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
     	// ULTRAFAST VERSION FOR protein, assuming that UINT is 32-bit integer
         if (node->isLeaf() && dad) {
             // external node
-        	UINT bit_ptn[8];
-        	int id = 0;
-            for (ptn = 0; ptn < aln->size(); ptn+=8, id+=5) {
+            // #pragma omp parallel for
+            for (int tmp = 0; tmp < aln->size()/8; tmp++) {
+                int ptn = tmp*8, id = tmp*5;
+                UINT bit_ptn[8];
+        	// UINT bit_ptn[8];
+        	// int id = 0;
+            // for (ptn = 0; ptn < aln->size(); ptn+=8, id+=5) {
             	int maxi = aln->size()-ptn;
             	if (maxi > 8) maxi = 8;
             	for (int i = 0; i < maxi; i++) {
@@ -809,9 +814,13 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
                 for(int p = 0; p < nptn; p++)
                 	dad_branch->partial_pars[ptn_pars_start_id + p] += ((PhyloNeighbor*) (*it))->partial_pars[ptn_pars_start_id + p];
             }
-        	UINT state_left[8], state_right[8], bit_ptn[8];
-        	int id = 0;
-            for (ptn = 0; ptn < aln->size(); ptn+=8, id+=5) {
+            // #pragma omp parallel for reduction(+:pars_steps)
+            for (int tmp = 0; tmp < aln->size()/8; tmp++) {
+                int ptn = tmp*8, id = tmp*5;
+                UINT state_left[8], state_right[8], bit_ptn[8];
+        	// UINT state_left[8], state_right[8], bit_ptn[8];
+        	// int id = 0;
+            // for (ptn = 0; ptn < aln->size(); ptn+=8, id+=5) {
             	int maxi = aln->size()-ptn;
             	if (maxi > 8) maxi = 8;
             	decodeProtState(left+id, state_left, maxi);
@@ -999,10 +1008,13 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
 //			tree_pars += dna_fitch_step[state_both] * aln->at(ptn+i).frequency;
 //		}
     } else if (aln->num_states == 20 && aln->seq_type == SEQ_PROTEIN) {
-    	// ULTRAFAST VERSION FOR PROTEIN
-    	UINT state_left[8], state_right[8];
-    	int id = 0;
-        for (ptn = 0; ptn < aln->size(); ptn+=8, id+=5) {
+        // ULTRAFAST VERSION FOR PROTEIN
+        // #pragma omp parallel for reduction(+:tree_pars)
+        for (int tmp = 0; tmp < aln->size()/8; tmp++) {
+            int ptn = tmp*8, id = tmp*5;
+            UINT state_left[8], state_right[8];
+    	// int id = 0;
+        // for (ptn = 0; ptn < aln->size(); ptn+=8, id+=5) {
         	int maxi = aln->size()-ptn;
         	if (maxi > 8) maxi = 8;
         	decodeProtState(node_branch->partial_pars+id, state_left, maxi);
