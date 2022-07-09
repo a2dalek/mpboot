@@ -697,6 +697,7 @@ typedef  struct noderec
   char             x;
   char             xPars;
   char             xBips;
+  int              memNumber;
 }
   node, *nodeptr;
 

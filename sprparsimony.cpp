@@ -7,6 +7,7 @@
 #include "sprparsimony.h"
 #include "parstree.h"
 #include <string>
+#include <omp.h>
 /**
  * PLL (version 1.0.0) a software library for phylogenetic inference
  * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
@@ -406,6 +407,26 @@ static void computeTraversalInfoParsimony(nodeptr p, int *ti, int *counter, int 
 	*counter = *counter + 4;
 }
 
+static void getOrderToRecompute(nodeptr q, vector<nodeptr> &recomputeList)
+{
+	nodeptr
+		p = q->back,
+    child1 = q->next->back,
+    child2 = q->next->next->back;
+  
+  if (p->next->back->number != p->next->next->back->number) {
+    recomputeList.push_back(q);
+  }
+
+  if (child1->number == child2->number) return;
+
+	if (child1 != (nodeptr)NULL)
+		getOrderToRecompute(child1, recomputeList);
+
+	if (child2 != (nodeptr)NULL)
+		getOrderToRecompute(child2, recomputeList);
+}
+
 
 #if (defined(__SSE3) || defined(__AVX))
 
@@ -791,6 +812,217 @@ static void newviewParsimonyIterativeFast(pllInstance *tr, partitionList *pr, in
       if (perSiteScores)
     	  addPerSiteSubtreeScores(pr, pNumber, qNumber, rNumber); // Diep: add rNumber and qNumber to pNumber
     }
+}
+
+static unsigned int caculateCurrentParsimonyScore(nodeptr p, nodeptr q, nodeptr r, pllInstance *tr, partitionList *pr)
+{
+  unsigned int totalScore = 0;
+
+  INT_TYPE
+    allOne = SET_ALL_BITS_ONE;
+
+  int
+    model,
+    index;
+
+  int maxMemNumOnATree = 2 * tr->mxtips;
+
+  int pMemNum = p->memNumber;
+  int qMemNum = q->memNumber;
+  int rMemNum = r->memNumber;
+  int curMemNum = 2*maxMemNumOnATree;
+
+  for(model = 0; model < pr->numberOfPartitions; model++)
+  {
+    size_t
+      k,
+      states = pr->partitionData[model]->states,
+      width = pr->partitionData[model]->parsimonyLength;
+
+    unsigned int
+      i;
+
+    switch(states)
+    {
+      case 4:
+      {
+        parsimonyNumber
+          *left[4],
+          *right[4],
+          *cur[4],
+          *newNode[4];
+
+        for(k = 0; k < 4; k++)
+        {
+          left[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (pMemNum)) + width * k]);
+          right[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (qMemNum)) + width * k]);
+          cur[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (curMemNum)) + width * k]);
+          newNode[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (rMemNum)) + width * k]);
+        }
+
+        for(i = 0; i < width; i += INTS_PER_VECTOR)
+        {
+          INT_TYPE
+            s_r, s_l, v_N,
+            l_A, l_C, l_G, l_T,
+            v_A, v_C, v_G, v_T;
+
+          s_l = VECTOR_LOAD((CAST)(&left[0][i]));
+          s_r = VECTOR_LOAD((CAST)(&right[0][i]));
+          l_A = VECTOR_BIT_AND(s_l, s_r);
+          v_A = VECTOR_BIT_OR(s_l, s_r);
+
+          s_l = VECTOR_LOAD((CAST)(&left[1][i]));
+          s_r = VECTOR_LOAD((CAST)(&right[1][i]));
+          l_C = VECTOR_BIT_AND(s_l, s_r);
+          v_C = VECTOR_BIT_OR(s_l, s_r);
+
+          s_l = VECTOR_LOAD((CAST)(&left[2][i]));
+          s_r = VECTOR_LOAD((CAST)(&right[2][i]));
+          l_G = VECTOR_BIT_AND(s_l, s_r);
+          v_G = VECTOR_BIT_OR(s_l, s_r);
+
+          s_l = VECTOR_LOAD((CAST)(&left[3][i]));
+          s_r = VECTOR_LOAD((CAST)(&right[3][i]));
+          l_T = VECTOR_BIT_AND(s_l, s_r);
+          v_T = VECTOR_BIT_OR(s_l, s_r);
+          
+          v_N = VECTOR_BIT_OR(VECTOR_BIT_OR(l_A, l_C), VECTOR_BIT_OR(l_G, l_T));
+          VECTOR_STORE((CAST)(&cur[0][i]), VECTOR_BIT_OR(l_A, VECTOR_AND_NOT(v_N, v_A)));
+          VECTOR_STORE((CAST)(&cur[1][i]), VECTOR_BIT_OR(l_C, VECTOR_AND_NOT(v_N, v_C)));
+          VECTOR_STORE((CAST)(&cur[2][i]), VECTOR_BIT_OR(l_G, VECTOR_AND_NOT(v_N, v_G)));
+          VECTOR_STORE((CAST)(&cur[3][i]), VECTOR_BIT_OR(l_T, VECTOR_AND_NOT(v_N, v_T)));
+          v_N = VECTOR_AND_NOT(v_N, allOne);
+          totalScore += vectorPopcount(v_N);
+        }
+
+        for(i = 0; i < width; i += INTS_PER_VECTOR)
+        {
+          INT_TYPE
+            s_r, s_l, v_N,
+            l_A, l_C, l_G, l_T,
+            v_A, v_C, v_G, v_T;
+
+          s_l = VECTOR_LOAD((CAST)(&cur[0][i]));
+          s_r = VECTOR_LOAD((CAST)(&newNode[0][i]));
+          l_A = VECTOR_BIT_AND(s_l, s_r);
+          v_A = VECTOR_BIT_OR(s_l, s_r);
+
+          s_l = VECTOR_LOAD((CAST)(&cur[1][i]));
+          s_r = VECTOR_LOAD((CAST)(&newNode[1][i]));
+          l_C = VECTOR_BIT_AND(s_l, s_r);
+          v_C = VECTOR_BIT_OR(s_l, s_r);
+
+          s_l = VECTOR_LOAD((CAST)(&cur[2][i]));
+          s_r = VECTOR_LOAD((CAST)(&newNode[2][i]));
+          l_G = VECTOR_BIT_AND(s_l, s_r);
+          v_G = VECTOR_BIT_OR(s_l, s_r);
+
+          s_l = VECTOR_LOAD((CAST)(&cur[3][i]));
+          s_r = VECTOR_LOAD((CAST)(&newNode[3][i]));
+          l_T = VECTOR_BIT_AND(s_l, s_r);
+          v_T = VECTOR_BIT_OR(s_l, s_r);
+
+          v_N = VECTOR_BIT_OR(VECTOR_BIT_OR(l_A, l_C), VECTOR_BIT_OR(l_G, l_T));
+          v_N = VECTOR_AND_NOT(v_N, allOne);
+          totalScore += vectorPopcount(v_N);
+        }
+      }
+      break;
+    }
+    
+    totalScore += tr->parsimonyScore[pMemNum] + tr->parsimonyScore[qMemNum];
+  }
+
+  return totalScore;
+}
+
+static void recomputeOnTwoTree(vector<nodeptr> &recomputeList, pllInstance *tr, partitionList *pr)
+{
+  INT_TYPE
+    allOne = SET_ALL_BITS_ONE;
+
+  int
+    model,
+    index;
+
+
+  for (int pos=0; pos < recomputeList.size(); pos++) {
+
+    int rMemNum = recomputeList[pos]->back->memNumber;
+    int pMemNum = recomputeList[pos]->back->next->back->memNumber;
+    int qMemNum = recomputeList[pos]->back->next->next->back->memNumber;
+    
+    unsigned int totalScore = 0;
+
+    for(model = 0; model < pr->numberOfPartitions; model++)
+    {
+      size_t
+        k,
+        states = pr->partitionData[model]->states,
+        width = pr->partitionData[model]->parsimonyLength;
+      unsigned int
+        i;
+
+      switch(states)
+      {
+        case 4:
+        {
+          parsimonyNumber
+            *left[4],
+            *right[4],
+            *cur[4];
+
+          for(k = 0; k < 4; k++)
+          {
+              left[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (pMemNum)) + width * k]);
+              right[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (qMemNum)) + width * k]);
+              cur[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (rMemNum)) + width * k]);
+          }
+
+          for(i = 0; i < width; i += INTS_PER_VECTOR)
+          {
+            INT_TYPE
+              s_r, s_l, v_N,
+              l_A, l_C, l_G, l_T,
+              v_A, v_C, v_G, v_T;
+
+            s_l = VECTOR_LOAD((CAST)(&left[0][i]));
+            s_r = VECTOR_LOAD((CAST)(&right[0][i]));
+            l_A = VECTOR_BIT_AND(s_l, s_r);
+            v_A = VECTOR_BIT_OR(s_l, s_r);
+
+            s_l = VECTOR_LOAD((CAST)(&left[1][i]));
+            s_r = VECTOR_LOAD((CAST)(&right[1][i]));
+            l_C = VECTOR_BIT_AND(s_l, s_r);
+            v_C = VECTOR_BIT_OR(s_l, s_r);
+
+            s_l = VECTOR_LOAD((CAST)(&left[2][i]));
+            s_r = VECTOR_LOAD((CAST)(&right[2][i]));
+            l_G = VECTOR_BIT_AND(s_l, s_r);
+            v_G = VECTOR_BIT_OR(s_l, s_r);
+
+            s_l = VECTOR_LOAD((CAST)(&left[3][i]));
+            s_r = VECTOR_LOAD((CAST)(&right[3][i]));
+            l_T = VECTOR_BIT_AND(s_l, s_r);
+            v_T = VECTOR_BIT_OR(s_l, s_r);
+
+            v_N = VECTOR_BIT_OR(VECTOR_BIT_OR(l_A, l_C), VECTOR_BIT_OR(l_G, l_T));
+
+            VECTOR_STORE((CAST)(&cur[0][i]), VECTOR_BIT_OR(l_A, VECTOR_AND_NOT(v_N, v_A)));
+            VECTOR_STORE((CAST)(&cur[1][i]), VECTOR_BIT_OR(l_C, VECTOR_AND_NOT(v_N, v_C)));
+            VECTOR_STORE((CAST)(&cur[2][i]), VECTOR_BIT_OR(l_G, VECTOR_AND_NOT(v_N, v_G)));
+            VECTOR_STORE((CAST)(&cur[3][i]), VECTOR_BIT_OR(l_T, VECTOR_AND_NOT(v_N, v_T)));
+            v_N = VECTOR_AND_NOT(v_N, allOne);
+            totalScore += vectorPopcount(v_N);
+          }
+        }
+        break;
+      }
+    }
+    
+    tr->parsimonyScore[rMemNum] = totalScore + tr->parsimonyScore[pMemNum] + tr->parsimonyScore[qMemNum];
+  }
 }
 
 template <class VectorClass, class Numeric, const size_t states, const bool BY_PATTERN>
@@ -1851,6 +2083,15 @@ static void insertParsimony (pllInstance *tr, partitionList *pr, nodeptr p, node
   newviewParsimony(tr, pr, p, perSiteScores);
 }
 
+static void insertNodeInNewTree(nodeptr p, nodeptr q)
+{
+  nodeptr  r;
+
+  r = q->back;
+
+  hookupDefault(p->next,       q);
+  hookupDefault(p->next->next, r);
+}
 
 
 static nodeptr buildNewTip (pllInstance *tr, nodeptr p)
@@ -1877,7 +2118,7 @@ static void buildSimpleTree (pllInstance *tr, partitionList *pr, int ip, int iq,
   p = tr->nodep[ip];
   hookupDefault(p, tr->nodep[iq]);
   s = buildNewTip(tr, tr->nodep[ir]);
-  insertParsimony(tr, pr, s, p, PLL_FALSE);
+  insertNodeInNewTree(s, p);
 }
 
 // Copied from Tung's nnisearch.cpp
@@ -2779,7 +3020,7 @@ static void compressDNA(pllInstance *tr, partitionList *pr, int *informative, in
 #endif
 
 
-      rax_posix_memalign ((void **) &(pr->partitionData[model]->parsVect), PLL_BYTE_ALIGNMENT, (size_t)compressedEntriesPadded * states * totalNodes * sizeof(parsimonyNumber));
+      rax_posix_memalign ((void **) &(pr->partitionData[model]->parsVect), PLL_BYTE_ALIGNMENT, (size_t)compressedEntriesPadded * states * (2 * totalNodes + omp_get_num_threads()) * sizeof(parsimonyNumber));
 
       for(i = 0; i < compressedEntriesPadded * states * totalNodes; i++)
         pr->partitionData[model]->parsVect[i] = 0;
@@ -2787,7 +3028,7 @@ static void compressDNA(pllInstance *tr, partitionList *pr, int *informative, in
       if (perSiteScores)
        {
          /* for per site parsimony score at each node */
-         rax_posix_memalign ((void **) &(pr->partitionData[model]->perSitePartialPars), PLL_BYTE_ALIGNMENT, totalNodes * (size_t)compressedEntriesPadded * PLL_PCF * sizeof (parsimonyNumber));
+         rax_posix_memalign ((void **) &(pr->partitionData[model]->perSitePartialPars), PLL_BYTE_ALIGNMENT, (2 * totalNodes + omp_get_num_threads()) * (size_t)compressedEntriesPadded * PLL_PCF * sizeof (parsimonyNumber));
          for (i = 0; i < totalNodes * (size_t)compressedEntriesPadded * PLL_PCF; ++i)
         	 pr->partitionData[model]->perSitePartialPars[i] = 0;
        }
@@ -2869,6 +3110,15 @@ static void compressDNA(pllInstance *tr, partitionList *pr, int *informative, in
     tr->parsimonyScore[i] = 0;
 }
 
+static void getAdditionList(pllInstance *tr, nodeptr q, vector<nodeptr> &listOnMainTree)
+{
+  listOnMainTree.push_back(q);
+  if(q->number > tr->mxtips)
+    {
+      getAdditionList(tr, q->next->back, listOnMainTree);
+      getAdditionList(tr, q->next->next->back, listOnMainTree);
+    }
+}
 
 
 static void stepwiseAddition(pllInstance *tr, partitionList *pr, nodeptr p, nodeptr q)
@@ -3024,12 +3274,30 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
 
   tr->nextnode = tr->mxtips + 1;
 
-  buildSimpleTree(tr, pr, perm[1], perm[2], perm[3]);
+  int memNum = tr->mxtips;
+  for (int i=1; i<=tr->mxtips; i++) {
+    tr->nodep[perm[i]]->memNumber = perm[i];
+  }
 
+  buildSimpleTree(tr, pr, perm[1], perm[2], perm[3]);
+  
+  tr->nodep[perm[1]]->back->memNumber = ++memNum;
+  tr->nodep[perm[2]]->back->memNumber = ++memNum;
+  tr->nodep[perm[3]]->back->memNumber = ++memNum;
+  
   f = tr->start;
 
   bestTreeScoreHits = 1;
+  
+  {
+    vector<nodeptr> recomputeList;
 
+    for (int i=1; i<=3; i++) {
+      recomputeList.push_back(tr->nodep[perm[i]]);
+    }
+    recomputeOnTwoTree(recomputeList, tr, pr);
+  }
+  
   while(tr->ntips < tr->mxtips)
     {
       nodeptr q;
@@ -3040,31 +3308,63 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
       q = tr->nodep[(tr->nextnode)++];
       p->back = q;
       q->back = p;
+      // if(tr->grouped)
+      //   {
+      //     int
+      //       number = p->back->number;
 
-      if(tr->grouped)
-        {
-          int
-            number = p->back->number;
+      //     tr->constraintVector[number] = -9;
+      //   }
 
-          tr->constraintVector[number] = -9;
-        }
+      vector<nodeptr> listOnMainTree;
+      getAdditionList(tr, f->back, listOnMainTree);
 
-      stepwiseAddition(tr, pr, q, f->back);
-//      cout << "tr->ntips = " << tr->ntips << endl;
+      // vector<unsigned int> scoreOnThreads(omp_get_num_threads(), INT_MAX);
+      // vector<nodeptr> nodeOnThreads(omp_get_num_threads(), NULL);
+
+      // #pragma omp parallel for
+      for (int i=0;i<listOnMainTree.size();i++) {
+          nodeptr currentNode = listOnMainTree[i];
+          nodeptr nextNode = currentNode->back;
+          unsigned int mp = caculateCurrentParsimonyScore(currentNode, nextNode, p, tr, pr);
+          if(mp < tr->bestParsimony) bestTreeScoreHits = 1;
+          else if(mp == tr->bestParsimony) bestTreeScoreHits++;
+          if((mp < tr->bestParsimony) || ((mp == tr->bestParsimony) && (random_double() <= 1.0 / bestTreeScoreHits)))
+          {
+            tr->bestParsimony = mp;
+            tr->insertNode = currentNode;
+          }
+          // if((mp < scoreOnThreads[omp_get_thread_num()]))
+          // {
+          //   scoreOnThreads[omp_get_thread_num()] = mp;
+          //   nodeOnThreads[omp_get_thread_num()] = currentNode;
+          // }
+      }
+      // for (int i=0;i<scoreOnThreads.size();i++) {
+      //   if((scoreOnThreads[i] < tr->bestParsimony))
+      //   {
+      //       tr->bestParsimony = scoreOnThreads[i];
+      //       tr->insertNode = nodeOnThreads[i];
+      //   }
+      // }
 
       {
+        vector<nodeptr> recomputeList;
+
         nodeptr
           r = tr->insertNode->back;
-
-        int counter = 4;
-
+        cout<<tr->bestParsimony<<" "<<tr->insertNode->number<<endl;
         hookupDefault(q->next,       tr->insertNode);
         hookupDefault(q->next->next, r);
 
-        computeTraversalInfoParsimony(q, tr->ti, &counter, tr->mxtips, PLL_FALSE, 0);
-        tr->ti[0] = counter;
-
-        newviewParsimonyIterativeFast(tr, pr, 0);
+        q->memNumber = ++memNum;
+        q->next->memNumber = ++memNum;
+        q->next->next->memNumber = ++memNum;
+        
+        recomputeList.clear();
+        recomputeList.push_back(p);
+        getOrderToRecompute(q, recomputeList);
+        recomputeOnTwoTree(recomputeList, tr, pr);
       }
     }
 
