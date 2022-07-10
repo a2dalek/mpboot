@@ -68,9 +68,7 @@
 #include "sprparsimony.h"
 #include "vectorclass/vectorclass.h"
 
-#ifdef _OPENMP
-	#include <omp.h>
-#endif
+#include <omp.h>
 
 //#include "vectorclass/vectorclass.h"
 
@@ -2140,7 +2138,8 @@ int main(){
 
 int main(int argc, char *argv[])
 {
-
+	// omp_set_dynamic(0); 
+	// omp_set_num_threads(4);
 	/*************************/
 	{ /* local scope */
 		int found=FALSE;              /* "click" found in cmd name? */

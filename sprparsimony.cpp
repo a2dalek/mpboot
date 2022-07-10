@@ -8,6 +8,7 @@
 #include "parstree.h"
 #include <string>
 #include <omp.h>
+#include "timeutil.h"
 /**
  * PLL (version 1.0.0) a software library for phylogenetic inference
  * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
@@ -825,12 +826,11 @@ static unsigned int caculateCurrentParsimonyScore(nodeptr p, nodeptr q, nodeptr 
     model,
     index;
 
-  int maxMemNumOnATree = 2 * tr->mxtips;
 
   int pMemNum = p->memNumber;
   int qMemNum = q->memNumber;
   int rMemNum = r->memNumber;
-  int curMemNum = 2*maxMemNumOnATree;
+  int curMemNum = 2 * tr->mxtips * 2 + omp_get_thread_num();
 
   for(model = 0; model < pr->numberOfPartitions; model++)
   {
@@ -854,10 +854,10 @@ static unsigned int caculateCurrentParsimonyScore(nodeptr p, nodeptr q, nodeptr 
 
         for(k = 0; k < 4; k++)
         {
-          left[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (pMemNum)) + width * k]);
-          right[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (qMemNum)) + width * k]);
-          cur[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (curMemNum)) + width * k]);
-          newNode[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (rMemNum)) + width * k]);
+            left[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (pMemNum)) + width * k]);
+            right[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (qMemNum)) + width * k]);
+            cur[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (curMemNum)) + width * k]);
+            newNode[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (rMemNum)) + width * k]);
         }
 
         for(i = 0; i < width; i += INTS_PER_VECTOR)
@@ -975,9 +975,9 @@ static void recomputeOnTwoTree(vector<nodeptr> &recomputeList, pllInstance *tr, 
 
           for(k = 0; k < 4; k++)
           {
-              left[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (pMemNum)) + width * k]);
-              right[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (qMemNum)) + width * k]);
-              cur[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (rMemNum)) + width * k]);
+            left[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (pMemNum)) + width * k]);
+            right[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (qMemNum)) + width * k]);
+            cur[k]  = &(pr->partitionData[model]->parsVect[(width * 4 * (rMemNum)) + width * k]);
           }
 
           for(i = 0; i < width; i += INTS_PER_VECTOR)
@@ -1020,7 +1020,6 @@ static void recomputeOnTwoTree(vector<nodeptr> &recomputeList, pllInstance *tr, 
         break;
       }
     }
-    
     tr->parsimonyScore[rMemNum] = totalScore + tr->parsimonyScore[pMemNum] + tr->parsimonyScore[qMemNum];
   }
 }
@@ -2978,7 +2977,9 @@ static void compressDNA(pllInstance *tr, partitionList *pr, int *informative, in
     i,
     model;
 
-  totalNodes = 2 * (size_t)tr->mxtips;
+  // TODO: fix this later
+  totalNodes = 2 * (size_t)tr->mxtips * 2 + 4;
+  cout<<totalNodes<<endl;
 
 
 
@@ -3020,7 +3021,7 @@ static void compressDNA(pllInstance *tr, partitionList *pr, int *informative, in
 #endif
 
 
-      rax_posix_memalign ((void **) &(pr->partitionData[model]->parsVect), PLL_BYTE_ALIGNMENT, (size_t)compressedEntriesPadded * states * (2 * totalNodes + omp_get_num_threads()) * sizeof(parsimonyNumber));
+      rax_posix_memalign ((void **) &(pr->partitionData[model]->parsVect), PLL_BYTE_ALIGNMENT, (size_t)compressedEntriesPadded * states * totalNodes * sizeof(parsimonyNumber));
 
       for(i = 0; i < compressedEntriesPadded * states * totalNodes; i++)
         pr->partitionData[model]->parsVect[i] = 0;
@@ -3028,7 +3029,7 @@ static void compressDNA(pllInstance *tr, partitionList *pr, int *informative, in
       if (perSiteScores)
        {
          /* for per site parsimony score at each node */
-         rax_posix_memalign ((void **) &(pr->partitionData[model]->perSitePartialPars), PLL_BYTE_ALIGNMENT, (2 * totalNodes + omp_get_num_threads()) * (size_t)compressedEntriesPadded * PLL_PCF * sizeof (parsimonyNumber));
+         rax_posix_memalign ((void **) &(pr->partitionData[model]->perSitePartialPars), PLL_BYTE_ALIGNMENT, totalNodes * (size_t)compressedEntriesPadded * PLL_PCF * sizeof (parsimonyNumber));
          for (i = 0; i < totalNodes * (size_t)compressedEntriesPadded * PLL_PCF; ++i)
         	 pr->partitionData[model]->perSitePartialPars[i] = 0;
        }
@@ -3298,6 +3299,7 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
     recomputeOnTwoTree(recomputeList, tr, pr);
   }
   
+  int start = getRealTime();
   while(tr->ntips < tr->mxtips)
     {
       nodeptr q;
@@ -3319,41 +3321,43 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
       vector<nodeptr> listOnMainTree;
       getAdditionList(tr, f->back, listOnMainTree);
 
-      // vector<unsigned int> scoreOnThreads(omp_get_num_threads(), INT_MAX);
-      // vector<nodeptr> nodeOnThreads(omp_get_num_threads(), NULL);
+      vector<unsigned int> scoreOnThreads(omp_get_num_threads(), INT_MAX);
+      vector<nodeptr> nodeOnThreads(omp_get_num_threads(), NULL);
 
       // #pragma omp parallel for
       for (int i=0;i<listOnMainTree.size();i++) {
           nodeptr currentNode = listOnMainTree[i];
           nodeptr nextNode = currentNode->back;
           unsigned int mp = caculateCurrentParsimonyScore(currentNode, nextNode, p, tr, pr);
-          if(mp < tr->bestParsimony) bestTreeScoreHits = 1;
-          else if(mp == tr->bestParsimony) bestTreeScoreHits++;
-          if((mp < tr->bestParsimony) || ((mp == tr->bestParsimony) && (random_double() <= 1.0 / bestTreeScoreHits)))
-          {
-            tr->bestParsimony = mp;
-            tr->insertNode = currentNode;
-          }
-          // if((mp < scoreOnThreads[omp_get_thread_num()]))
+          // if(mp < tr->bestParsimony) bestTreeScoreHits = 1;
+          // else if(mp == tr->bestParsimony) bestTreeScoreHits++;
+          // if((mp < tr->bestParsimony) || ((mp == tr->bestParsimony) && (random_double() <= 1.0 / bestTreeScoreHits)))
           // {
-          //   scoreOnThreads[omp_get_thread_num()] = mp;
-          //   nodeOnThreads[omp_get_thread_num()] = currentNode;
+          //   tr->bestParsimony = mp;
+          //   tr->insertNode = currentNode;
           // }
+
+          int numThread = omp_get_thread_num();
+          if((mp < scoreOnThreads[numThread]))
+          {
+            scoreOnThreads[numThread] = mp;
+            nodeOnThreads[numThread] = currentNode;
+          }
       }
-      // for (int i=0;i<scoreOnThreads.size();i++) {
-      //   if((scoreOnThreads[i] < tr->bestParsimony))
-      //   {
-      //       tr->bestParsimony = scoreOnThreads[i];
-      //       tr->insertNode = nodeOnThreads[i];
-      //   }
-      // }
+      for (int i=0;i<scoreOnThreads.size();i++) {
+        if((scoreOnThreads[i] < tr->bestParsimony))
+        {
+            tr->bestParsimony = scoreOnThreads[i];
+            tr->insertNode = nodeOnThreads[i];
+        }
+      }
 
       {
         vector<nodeptr> recomputeList;
 
         nodeptr
           r = tr->insertNode->back;
-        cout<<tr->bestParsimony<<" "<<tr->insertNode->number<<endl;
+        // cout<<tr->bestParsimony<<" "<<tr->insertNode->number<<endl;
         hookupDefault(q->next,       tr->insertNode);
         hookupDefault(q->next->next, r);
 
@@ -3367,7 +3371,7 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
         recomputeOnTwoTree(recomputeList, tr, pr);
       }
     }
-
+    cout<<"Time: "<<getRealTime() - start<<endl;
   nodeRectifierPars(tr);
 //  cout << "DONE stepwise addition" << endl;
 
