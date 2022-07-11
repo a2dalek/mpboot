@@ -408,7 +408,7 @@ static void computeTraversalInfoParsimony(nodeptr p, int *ti, int *counter, int 
 	*counter = *counter + 4;
 }
 
-static void getOrderToRecompute(nodeptr q, vector<nodeptr> &recomputeList)
+static void getOrderToRecompute(nodeptr q, nodeptr* listOnMainTree, int* counter)
 {
 	nodeptr
 		p = q->back,
@@ -416,16 +416,17 @@ static void getOrderToRecompute(nodeptr q, vector<nodeptr> &recomputeList)
     child2 = q->next->next->back;
   
   if (p->next->back->number != p->next->next->back->number) {
-    recomputeList.push_back(q);
+    listOnMainTree[*counter + 1] = q;
+    *counter = *counter + 1;
   }
 
   if (child1->number == child2->number) return;
 
 	if (child1 != (nodeptr)NULL)
-		getOrderToRecompute(child1, recomputeList);
+		getOrderToRecompute(child1, listOnMainTree, counter);
 
 	if (child2 != (nodeptr)NULL)
-		getOrderToRecompute(child2, recomputeList);
+		getOrderToRecompute(child2, listOnMainTree, counter);
 }
 
 
@@ -831,6 +832,7 @@ static unsigned int caculateCurrentParsimonyScore(nodeptr p, nodeptr q, nodeptr 
   int qMemNum = q->memNumber;
   int rMemNum = r->memNumber;
   int curMemNum = 2 * tr->mxtips * 2 + omp_get_thread_num();
+  // int curMemNum = 2 * tr->mxtips * 2;
 
   for(model = 0; model < pr->numberOfPartitions; model++)
   {
@@ -937,7 +939,7 @@ static unsigned int caculateCurrentParsimonyScore(nodeptr p, nodeptr q, nodeptr 
   return totalScore;
 }
 
-static void recomputeOnTwoTree(vector<nodeptr> &recomputeList, pllInstance *tr, partitionList *pr)
+static void recomputeOnTwoTree(nodeptr* recomputeList, pllInstance *tr, partitionList *pr, int* counter)
 {
   INT_TYPE
     allOne = SET_ALL_BITS_ONE;
@@ -947,7 +949,7 @@ static void recomputeOnTwoTree(vector<nodeptr> &recomputeList, pllInstance *tr, 
     index;
 
 
-  for (int pos=0; pos < recomputeList.size(); pos++) {
+  for (int pos=0; pos < *counter; pos++) {
 
     int rMemNum = recomputeList[pos]->back->memNumber;
     int pMemNum = recomputeList[pos]->back->next->back->memNumber;
@@ -3111,13 +3113,14 @@ static void compressDNA(pllInstance *tr, partitionList *pr, int *informative, in
     tr->parsimonyScore[i] = 0;
 }
 
-static void getAdditionList(pllInstance *tr, nodeptr q, vector<nodeptr> &listOnMainTree)
+static void getAdditionList(pllInstance *tr, nodeptr q, nodeptr* listOnMainTree, int* counter)
 {
-  listOnMainTree.push_back(q);
+  listOnMainTree[*counter + 1] = q;
+  *counter = *counter + 1;
   if(q->number > tr->mxtips)
     {
-      getAdditionList(tr, q->next->back, listOnMainTree);
-      getAdditionList(tr, q->next->next->back, listOnMainTree);
+      getAdditionList(tr, q->next->back, listOnMainTree, counter);
+      getAdditionList(tr, q->next->next->back, listOnMainTree, counter);
     }
 }
 
@@ -3261,8 +3264,14 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
   int
     i,
     nextsp,
+    counter,
     *perm        = (int *)rax_malloc((size_t)(tr->mxtips + 1) * sizeof(int));
 
+  nodeptr *listOnMainTree = (nodeptr *)rax_malloc((size_t)(2 * tr->mxtips + 1) * sizeof(nodeptr));
+
+  vector<unsigned int> scoreOnThreads(4, INT_MAX);
+  vector<nodeptr> nodeOnThreads(4, NULL);
+  
   unsigned int
     randomMP,
     startMP;
@@ -3291,14 +3300,14 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
   bestTreeScoreHits = 1;
   
   {
-    vector<nodeptr> recomputeList;
+    counter = 0;
 
     for (int i=1; i<=3; i++) {
-      recomputeList.push_back(tr->nodep[perm[i]]);
+      listOnMainTree[counter++] = tr->nodep[perm[i]];
     }
-    recomputeOnTwoTree(recomputeList, tr, pr);
+    recomputeOnTwoTree(listOnMainTree, tr, pr, &counter);
   }
-  
+
   int start = getRealTime();
   while(tr->ntips < tr->mxtips)
     {
@@ -3318,17 +3327,18 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
       //     tr->constraintVector[number] = -9;
       //   }
 
-      vector<nodeptr> listOnMainTree;
-      getAdditionList(tr, f->back, listOnMainTree);
+      counter = 0;
+      getAdditionList(tr, f->back, listOnMainTree, &counter);
 
-      vector<unsigned int> scoreOnThreads(omp_get_num_threads(), INT_MAX);
-      vector<nodeptr> nodeOnThreads(omp_get_num_threads(), NULL);
+      // for (int i=0;i<4;i++) {
+      //   scoreOnThreads[i] = INT_MAX;
+      //   nodeOnThreads[i] = NULL;
+      // }
 
-      // #pragma omp parallel for
-      for (int i=0;i<listOnMainTree.size();i++) {
+      #pragma omp parallel for
+      for (int i=0;i<counter;i++) {
           nodeptr currentNode = listOnMainTree[i];
-          nodeptr nextNode = currentNode->back;
-          unsigned int mp = caculateCurrentParsimonyScore(currentNode, nextNode, p, tr, pr);
+          unsigned int mp = caculateCurrentParsimonyScore(currentNode, currentNode->back, p, tr, pr);
           // if(mp < tr->bestParsimony) bestTreeScoreHits = 1;
           // else if(mp == tr->bestParsimony) bestTreeScoreHits++;
           // if((mp < tr->bestParsimony) || ((mp == tr->bestParsimony) && (random_double() <= 1.0 / bestTreeScoreHits)))
@@ -3338,6 +3348,7 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
           // }
 
           int numThread = omp_get_thread_num();
+          cout<<numThread<<endl;
           if((mp < scoreOnThreads[numThread]))
           {
             scoreOnThreads[numThread] = mp;
@@ -3351,10 +3362,7 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
             tr->insertNode = nodeOnThreads[i];
         }
       }
-
       {
-        vector<nodeptr> recomputeList;
-
         nodeptr
           r = tr->insertNode->back;
         // cout<<tr->bestParsimony<<" "<<tr->insertNode->number<<endl;
@@ -3365,13 +3373,15 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
         q->next->memNumber = ++memNum;
         q->next->next->memNumber = ++memNum;
         
-        recomputeList.clear();
-        recomputeList.push_back(p);
-        getOrderToRecompute(q, recomputeList);
-        recomputeOnTwoTree(recomputeList, tr, pr);
+        counter = 0;
+        listOnMainTree[counter++] = p;
+        getOrderToRecompute(q, listOnMainTree, &counter);
+        recomputeOnTwoTree(listOnMainTree, tr, pr, &counter);
       }
+     
     }
     cout<<"Time: "<<getRealTime() - start<<endl;
+    exit(0);
   nodeRectifierPars(tr);
 //  cout << "DONE stepwise addition" << endl;
 
