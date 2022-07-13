@@ -3268,9 +3268,8 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
     *perm        = (int *)rax_malloc((size_t)(tr->mxtips + 1) * sizeof(int));
 
   nodeptr *listOnMainTree = (nodeptr *)rax_malloc((size_t)(2 * tr->mxtips + 1) * sizeof(nodeptr));
-
-  vector<unsigned int> scoreOnThreads(4, INT_MAX);
-  vector<nodeptr> nodeOnThreads(4, NULL);
+  unsigned int *scoreOnThreads = (unsigned int *)rax_malloc((size_t)(8) * sizeof(unsigned int));
+  nodeptr *nodeOnThreads = (nodeptr *)rax_malloc((size_t)(8) * sizeof(nodeptr));
   
   unsigned int
     randomMP,
@@ -3308,7 +3307,11 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
     recomputeOnTwoTree(listOnMainTree, tr, pr, &counter);
   }
 
-  int start = getRealTime();
+  double sum1 =0.0;
+  double sum2 =0.0;
+  double sum3 =0.0;
+  double sum4 =0.0;
+  double start1 = omp_get_wtime();
   while(tr->ntips < tr->mxtips)
     {
       nodeptr q;
@@ -3319,23 +3322,17 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
       q = tr->nodep[(tr->nextnode)++];
       p->back = q;
       q->back = p;
-      // if(tr->grouped)
-      //   {
-      //     int
-      //       number = p->back->number;
-
-      //     tr->constraintVector[number] = -9;
-      //   }
 
       counter = 0;
+      double start = omp_get_wtime();
       getAdditionList(tr, f->back, listOnMainTree, &counter);
 
-      // for (int i=0;i<4;i++) {
-      //   scoreOnThreads[i] = INT_MAX;
-      //   nodeOnThreads[i] = NULL;
-      // }
+      for (int i=0;i<8;i++) {
+        scoreOnThreads[i] = INT_MAX;
+      }
 
-      #pragma omp parallel for
+      // #pragma omp parallel for
+      // schedule(static) shared(tr, pr, scoreOnThreads, nodeOnThreads) num_threads(4) dynamic(false)
       for (int i=0;i<counter;i++) {
           nodeptr currentNode = listOnMainTree[i];
           unsigned int mp = caculateCurrentParsimonyScore(currentNode, currentNode->back, p, tr, pr);
@@ -3348,39 +3345,45 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
           // }
 
           int numThread = omp_get_thread_num();
-          cout<<numThread<<endl;
+          // int numThread = 0;
+          //cout<<numThread<<endl;
           if((mp < scoreOnThreads[numThread]))
           {
             scoreOnThreads[numThread] = mp;
             nodeOnThreads[numThread] = currentNode;
           }
       }
-      for (int i=0;i<scoreOnThreads.size();i++) {
+      for (int i=0;i<8;i++) {
         if((scoreOnThreads[i] < tr->bestParsimony))
         {
             tr->bestParsimony = scoreOnThreads[i];
             tr->insertNode = nodeOnThreads[i];
         }
       }
-      {
-        nodeptr
-          r = tr->insertNode->back;
-        // cout<<tr->bestParsimony<<" "<<tr->insertNode->number<<endl;
-        hookupDefault(q->next,       tr->insertNode);
-        hookupDefault(q->next->next, r);
+      sum1+=omp_get_wtime()-start;
+      start=omp_get_wtime();
+      nodeptr r = tr->insertNode->back;
 
-        q->memNumber = ++memNum;
-        q->next->memNumber = ++memNum;
-        q->next->next->memNumber = ++memNum;
+      hookupDefault(q->next,       tr->insertNode);
+      hookupDefault(q->next->next, r);
+
+      q->memNumber = ++memNum;
+      q->next->memNumber = ++memNum;
+      q->next->next->memNumber = ++memNum;
         
-        counter = 0;
-        listOnMainTree[counter++] = p;
-        getOrderToRecompute(q, listOnMainTree, &counter);
-        recomputeOnTwoTree(listOnMainTree, tr, pr, &counter);
-      }
-     
+      counter = 0;
+        
+      listOnMainTree[counter++] = p;
+      start=omp_get_wtime();
+      getOrderToRecompute(q, listOnMainTree, &counter);
+      sum3+=omp_get_wtime()-start;
+      // cout<<counter<<"\n";
+      start=omp_get_wtime();
+      recomputeOnTwoTree(listOnMainTree, tr, pr, &counter);
+      sum4+=omp_get_wtime()-start;
+      sum2+=omp_get_wtime()-start;
     }
-    cout<<"Time: "<<getRealTime() - start<<endl;
+    cout<<"Time: "<<sum1<<" "<<" "<<sum2<<" "<<" "<<sum3<<" "<<sum4<<" "<<omp_get_wtime()-start1<<endl;
     exit(0);
   nodeRectifierPars(tr);
 //  cout << "DONE stepwise addition" << endl;
@@ -3418,7 +3421,6 @@ static void _pllMakeParsimonyTreeFast(pllInstance *tr, partitionList *pr, int sp
 
   rax_free(perm);
 }
-
 /** @brief Compute a randomized stepwise addition oder parsimony tree
 
     Implements the RAxML randomized stepwise addition order algorithm
