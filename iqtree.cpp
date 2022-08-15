@@ -1705,6 +1705,7 @@ double IQTree::doTreeSearch() {
   /*====================================================
    * MAIN LOOP OF THE IQ-TREE ALGORITHM
    *====================================================*/
+  global_temperature = -1.0;
   for (; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
     searchinfo.curIter = curIt;
     if (params->cutoff_percent > 100) {
@@ -1925,6 +1926,8 @@ double IQTree::doTreeSearch() {
       }
     }
     imd_tree = doNNISearch(nni_count, nni_steps);
+    
+    if (curIt % 10 == 0) global_temperature = -1.0;
 
     if (iqp_assess_quartet == IQP_BOOTSTRAP) {
       // restore alignment

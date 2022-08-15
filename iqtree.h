@@ -459,6 +459,8 @@ public:
      */
     int cur_pars_score;
 
+    double global_temperature;
+
 //    bool enable_parsimony;
     /**
             stopping rule
