@@ -38,7 +38,9 @@
  *
  * @file fastDNAparsimony.c
  */
-
+const double startTemperature = -5.0/log(0.65);
+const double cooling_amount = 0.5;
+const double deltaCoefficient = 30.0;
 #if defined(__MIC_NATIVE)
 
 #include <immintrin.h>
@@ -1264,7 +1266,7 @@ static int pllTestTBRMove(pllInstance *tr, partitionList *pr, nodeptr branch1,
         int tmpMP = mp;
         int delta = tmpBestParsimony - tmpMP;
         if (tr->temperature > 0.0 && mp > tr->bestParsimony) {
-            double tmp = double(delta*30)/double(tr->temperature);
+            double tmp = double(delta*deltaCoefficient)/double(tr->temperature);
             double probability = exp(tmp);
             if (random_double() <= probability) {
                 haveChange = true;
@@ -1284,7 +1286,7 @@ static int pllTestTBRMove(pllInstance *tr, partitionList *pr, nodeptr branch1,
 
     if (tr->stepCount == (2*tr->mxtips + 2) * (1<<5) / 8)  {
     // if (tr->stepCount == 2000) {
-        tr->temperature-= 0.5;
+        tr->temperature-= cooling_amount;
         tr->stepCount = 0;
     }
 
@@ -1800,7 +1802,7 @@ static int pllTestTBRMoveLeaf(pllInstance *tr, partitionList *pr,
         int tmpMP = mp;
         int delta = tmpBestParsimony - tmpMP;
         if (tr->temperature > 0.0) {
-            double tmp = double(delta*30)/double(tr->temperature);
+            double tmp = double(delta*deltaCoefficient)/double(tr->temperature);
             double probability = exp(tmp);
             if (random_double() <= probability) {
                 haveChange = true;
@@ -1818,7 +1820,7 @@ static int pllTestTBRMoveLeaf(pllInstance *tr, partitionList *pr,
 
     if (tr->stepCount == (2*tr->mxtips + 2) * (1<<5) / 8)  {
     // if (tr->stepCount == 2000) {
-        tr->temperature-= 0.5;
+        tr->temperature-= cooling_amount;
         tr->stepCount = 0;
     }
 
@@ -2029,7 +2031,7 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     unsigned int bestIterationScoreHits = 1;
     randomMP = tr->bestParsimony;
 
-    tr->temperature = (double)(-5)/log(0.65);
+    tr->temperature = startTemperature;
     tr->stepCount = 0;
 
     while (tr->temperature > 0.0) {
