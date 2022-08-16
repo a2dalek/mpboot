@@ -1301,6 +1301,8 @@ typedef struct {
     int treeStringLength;
 
     unsigned int bestParsimony;
+    double temperature;
+    int stepCount;
     unsigned int *parsimonyScore;
 
     double bestOfNode;
