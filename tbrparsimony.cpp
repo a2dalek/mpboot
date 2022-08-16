@@ -2172,6 +2172,8 @@ int pllOptimizeTbrParsimonyMix(pllInstance *tr, partitionList *pr, int mintrav,
     unsigned int bestIterationScoreHits = 1;
     randomMP = tr->bestParsimony;
 
+    bestTreeScoreHits = 1;
+
     do {
         // nodeRectifierPars(tr, false);
         nodeRectifierParsVer2(tr, false);
