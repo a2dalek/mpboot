@@ -1942,6 +1942,11 @@ pllInstance * pllCreateInstance (pllInstanceAttr * attr)
 
   tr->numberOfThreads   = attr->numberOfThreads;
   tr->rearrangeHistory  = NULL;
+  tr->maxCoolingTimes = attr->maxCoolingTimes;
+  tr->coolingSchedule = attr->coolingSchedule;
+  tr->startTemp = attr->startTemp;
+  tr->finalTemp = attr->finalTemp;
+  tr->firstAcceptProbility = attr->firstAcceptProbility;
 
   /* Lock the slave processors at this point */
 #ifdef _FINE_GRAIN_MPI

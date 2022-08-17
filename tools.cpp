@@ -881,6 +881,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
     params.write_local_optimal_trees = false;
+    params.coolingSchedule = LINEAR_ADDITIVE_COOLING;
+    params.start_temp = 11.6;
+    params.final_temp = 0.0;
+    params.maxCoolingTimes = 24;
+    params.acceptProbility = 0.075;
 
     if (params.nni5) {
         params.nni_type = NNI5;
@@ -1321,6 +1326,41 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -seed <random_seed>";
                 params.ran_seed = (unsigned)convert_int(argv[cnt]);
+                continue;
+            }
+            if (strcmp(argv[cnt], "-cooling_schedule") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -cooling_schedule <cooling_schedule>";
+                params.coolingSchedule = static_cast<CoolingSchedule>((unsigned)convert_int(argv[cnt]));
+                continue;
+            }
+            if (strcmp(argv[cnt], "-cooling_times") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -cooling_schedule <cooling_schedule>";
+                params.maxCoolingTimes = (unsigned)convert_int(argv[cnt]);
+                continue;
+            }
+            if (strcmp(argv[cnt], "-start_temp") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -seed <start_temp>";
+                params.start_temp = (unsigned)convert_double(argv[cnt]);
+                continue;
+            }
+            if (strcmp(argv[cnt], "-final_temp") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -seed <final_temp>";
+                params.final_temp = (unsigned)convert_double(argv[cnt]);
+                continue;
+            }
+            if (strcmp(argv[cnt], "-accept_rate") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -seed <accept_rate>";
+                params.acceptProbility = (unsigned)convert_double(argv[cnt]);
                 continue;
             }
             if (strcmp(argv[cnt], "-pdgain") == 0) {

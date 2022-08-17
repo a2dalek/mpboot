@@ -356,6 +356,13 @@ enum StateFreqType {
     FREQ_CODON_3x4C // special frequency for codon model
 };
 
+enum CoolingSchedule {
+        EXPONENTIAL_MULTIPLICATIVE_COOLING = 0,
+        EXPONENTIAL_ADDITIVE_COOLING = 1,
+        LINEAR_ADDITIVE_COOLING = 2,
+        LINEAR_MULTIPLICATIVE_COOLING = 3
+};
+
 /**
         alignment format type
  */
@@ -973,6 +980,11 @@ struct Params {
      */
     unsigned int ran_seed;
 
+    CoolingSchedule coolingSchedule;
+    int maxCoolingTimes;
+    double start_temp;
+    double final_temp;
+    double acceptProbility;
     /**
             run time of the algorithm
      */

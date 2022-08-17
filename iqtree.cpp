@@ -386,6 +386,11 @@ void IQTree::initTopologyByPLLRandomAdition(Params &params){
 	tmpAttr.saveMemory   = PLL_FALSE;
 	tmpAttr.useRecom     = PLL_FALSE;
 	tmpAttr.randomNumberSeed = params.ran_seed;
+  tmpAttr.coolingSchedule = static_cast<CoolingSchedulePll>(params.coolingSchedule);
+  tmpAttr.maxCoolingTimes = params.maxCoolingTimes;
+  tmpAttr.startTemp = params.start_temp;
+  tmpAttr.finalTemp = params.final_temp;
+  tmpAttr.firstAcceptProbility = params.acceptProbility;
 
 #ifdef _OPENMP
     tmpAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
@@ -568,6 +573,11 @@ void IQTree::initializePLL(Params &params) {
   pllAttr.saveMemory = PLL_FALSE;
   pllAttr.useRecom = PLL_FALSE;
   pllAttr.randomNumberSeed = params.ran_seed;
+  pllAttr.coolingSchedule = static_cast<CoolingSchedulePll>(params.coolingSchedule);
+  pllAttr.maxCoolingTimes = params.maxCoolingTimes;
+  pllAttr.startTemp = params.start_temp;
+  pllAttr.finalTemp = params.final_temp;
+  pllAttr.firstAcceptProbility = params.acceptProbility;
 #ifdef _OPENMP
   pllAttr.numberOfThreads =
       params.num_threads; /* This only affects the pthreads version */

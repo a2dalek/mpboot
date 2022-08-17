@@ -335,6 +335,14 @@ extern "C" {
 typedef int pllBoolean;
 
 /* @brief PLL instance attribute structure */
+
+enum CoolingSchedulePll {
+        EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL = 0,
+        EXPONENTIAL_ADDITIVE_COOLING_PLL = 1,
+        LINEAR_ADDITIVE_COOLING_PLL = 2,
+        LINEAR_MULTIPLICATIVE_COOLING_PLL = 3
+};
+
 typedef struct {
     int rateHetModel;
     int fastScaling;
@@ -342,6 +350,11 @@ typedef struct {
     int useRecom;
     long randomNumberSeed;
     int numberOfThreads;
+    enum CoolingSchedulePll coolingSchedule;
+    int maxCoolingTimes; 
+    double startTemp;
+    double finalTemp;
+    double firstAcceptProbility;
 } pllInstanceAttr;
 
 /** @brief Stores the recomputation-state of likelihood vectors  */
@@ -1301,8 +1314,6 @@ typedef struct {
     int treeStringLength;
 
     unsigned int bestParsimony;
-    double temperature;
-    int stepCount;
     unsigned int *parsimonyScore;
 
     double bestOfNode;
@@ -1364,6 +1375,17 @@ typedef struct {
     double likelihoodEpsilon;
     pllBoolean useCheckpoint;
 
+    enum CoolingSchedulePll coolingSchedule;
+    int maxCoolingTimes; 
+    int limitTrees;
+    int coolingTimes;
+    double deltaCoefficient;
+    double temperature;
+    double coolingAmount;
+    double startTemp;
+    double finalTemp;
+    double firstAcceptProbility;
+    int stepCount;
 } pllInstance;
 
 /** @brief Stores data related to a NNI move  */
