@@ -1292,10 +1292,12 @@ static int pllTestTBRMove(pllInstance *tr, partitionList *pr, nodeptr branch1,
                 tr->temperature = tr->startTemp / (1 + tr->coolingAmount * tr->coolingTimes);
             break;
 
-            // case EXPONENTIAL_ADDITIVE_COOLING_PLL:
-            //     tr->coolingAmount = 0.5;
-            //     tr->temperature = 20.0; 
-            // break;
+            case EXPONENTIAL_ADDITIVE_COOLING_PLL:
+            {
+                double deltaTemp = tr->startTemp - tr->finalTemp;
+                tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+            }
+            break;
 
             case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
                 tr->temperature *= tr->coolingAmount;
@@ -1845,10 +1847,12 @@ static int pllTestTBRMoveLeaf(pllInstance *tr, partitionList *pr,
                 tr->temperature = tr->startTemp / (1 + tr->coolingAmount * tr->coolingTimes);
             break;
 
-            // case EXPONENTIAL_ADDITIVE_COOLING_PLL:
-            //     tr->coolingAmount = 0.5;
-            //     tr->temperature = 20.0; 
-            // break;
+            case EXPONENTIAL_ADDITIVE_COOLING_PLL:
+            {
+                double deltaTemp = tr->startTemp - tr->finalTemp;
+                tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+            }
+            break;
 
             case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
                 tr->temperature *= tr->coolingAmount;
@@ -2050,7 +2054,6 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         first_call = false;
     }
 
-    int i;
     unsigned int startMP;
 
     assert(!tr->constrained);
@@ -2076,10 +2079,6 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
             tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
         break;
 
-        // case EXPONENTIAL_ADDITIVE_COOLING_PLL:
-        //     tr->coolingAmount = 0.5;
-        //     tr->temperature = 20.0; 
-        // break;
 
         case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
             tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
@@ -2090,11 +2089,9 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     tr->coolingTimes = 0;
     tr->temperature = tr->startTemp;
     tr->stepCount = 0;
-    // tr->limitTrees = (2*tr->mxtips + 2) * 4;
     tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
-    tr->deltaCoefficient = -tr->temperature * log(0.075);
+    tr->deltaCoefficient = -tr->temperature * log(tr->firstAcceptProbility);
 
-    // cout<<setprecision(5)<<tr->startTemp<<" "<<tr->finalTemp<<" "<<tr->limitTrees<<" "<<tr->deltaCoefficient<<" "<<tr->coolingAmount<<endl;
 
     while (tr->coolingTimes <= tr->maxCoolingTimes) {
         // nodeRectifierPars(tr, false);
