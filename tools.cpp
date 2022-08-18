@@ -1338,28 +1338,28 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-cooling_times") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -cooling_schedule <cooling_schedule>";
+                    throw "Use -cooling_times <cooling_times>";
                 params.maxCoolingTimes = (unsigned)convert_int(argv[cnt]);
                 continue;
             }
             if (strcmp(argv[cnt], "-start_temp") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -seed <start_temp>";
+                    throw "Use -start_temp <start_temp>";
                 params.start_temp = (unsigned)convert_double(argv[cnt]);
                 continue;
             }
             if (strcmp(argv[cnt], "-final_temp") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -seed <final_temp>";
+                    throw "Use -final_temp <final_temp>";
                 params.final_temp = (unsigned)convert_double(argv[cnt]);
                 continue;
             }
             if (strcmp(argv[cnt], "-accept_rate") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -seed <accept_rate>";
+                    throw "Use -accept_rate <accept_rate>";
                 params.acceptProbility = (unsigned)convert_double(argv[cnt]);
                 continue;
             }
