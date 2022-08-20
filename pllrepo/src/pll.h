@@ -1386,6 +1386,7 @@ typedef struct {
     double finalTemp;
     double firstAcceptProbility;
     int stepCount;
+    pllBoolean usingSA;
 } pllInstance;
 
 /** @brief Stores data related to a NNI move  */

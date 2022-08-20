@@ -1802,6 +1802,8 @@ struct Params {
 
     /** TRUE to write initial tree to a file (default: false) */
     bool write_init_tree;
+
+    bool usingSA;
 };
 
 /**

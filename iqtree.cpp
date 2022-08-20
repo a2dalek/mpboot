@@ -1712,10 +1712,15 @@ double IQTree::doTreeSearch() {
   double cur_correlation = 0.0;
   int ratchet_iter_count = 0;
   assert(pllInst != NULL);
+
+  params->usingSA = false;
   /*====================================================
    * MAIN LOOP OF THE IQ-TREE ALGORITHM
    *====================================================*/
   for (; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
+    if (curIt > stop_rule.getLastImprovedIteration() + 50) {
+      params->usingSA = true;
+    }
     searchinfo.curIter = curIt;
     if (params->cutoff_percent > 100) {
       // old way of updating logl_cutoff
@@ -2288,6 +2293,7 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
 
       if (params->tbr_alternate != -1) {
         if (cnt_tbr_spr_alternate > 0) {
+            pllInst->usingSA = params->usingSA;
             pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
         } else {
@@ -2312,6 +2318,7 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
         }
         // cout << "cnt: " << cntItersNotImproved << '\n';
       } else if (params->tbr_pars == true) {
+        pllInst->usingSA = params->usingSA;
         pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
       } else {
