@@ -1718,7 +1718,7 @@ double IQTree::doTreeSearch() {
    * MAIN LOOP OF THE IQ-TREE ALGORITHM
    *====================================================*/
   for (; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
-    if (curIt > stop_rule.getLastImprovedIteration() + 50) {
+    if (curIt > stop_rule.getLastImprovedIteration() + 30) {
       params->usingSA = true;
     }
     searchinfo.curIter = curIt;
