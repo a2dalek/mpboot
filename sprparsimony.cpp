@@ -138,6 +138,8 @@ extern int pllCostNstates;                // Diep: For weighted version
 extern parsimonyNumber *vectorCostMatrix; // BQM: vectorized cost matrix
 parsimonyNumber highest_cost;
 
+static bool haveChange = false;
+
 //(if needed) split the parsimony vector into several segments to avoid overflow
 // when calc rell based on vec8us
 extern int pllRepsSegments;  // # of segments
@@ -1997,18 +1999,76 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             // If UFBoot is enabled ...
             pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
         }
+        
+        if (tr->usingSA) {
+            if (!perSiteScores || (!haveChange)) {
+                if (mp < tr->bestParsimony) {
+                    tr->bestParsimony = mp;
+                    bestTreeScoreHits = 1;
+                    haveChange = true;
+                } else if (mp == tr->bestParsimony) {
+                    bestTreeScoreHits++;
+                    if (random_double() < (double)1/bestTreeScoreHits) {
+                        haveChange = true;
+                    }
+                } else if (tr->temperature >= tr->finalTemp) {
+                    int tmpBestParsimony = tr->bestParsimony;
+                    int tmpMP = mp;
+                    int delta = tmpBestParsimony - tmpMP;
+                    double tmp = double(tr->deltaCoefficient * delta)/double(tr->temperature);
+                    double probability = exp(tmp);
+                    if (random_double() <= probability) {
+                        haveChange = true;
+                    } 
+                }
 
-        if (mp < tr->bestParsimony)
-            bestTreeScoreHits = 1;
-        else if (mp == tr->bestParsimony)
-            bestTreeScoreHits++;
+                if (haveChange) {
+                    tr->insertNode = q;
+                    tr->removeNode = p;
+                }
+            }
 
-        if ((mp < tr->bestParsimony) ||
-            ((mp == tr->bestParsimony) &&
-             (random_double() <= 1.0 / bestTreeScoreHits))) {
-            tr->bestParsimony = mp;
-            tr->insertNode = q;
-            tr->removeNode = p;
+            tr->stepCount++; 
+
+            if (tr->stepCount == tr->limitTrees)  {
+                switch (tr->coolingSchedule)
+                {
+                    case LINEAR_ADDITIVE_COOLING_PLL:
+                        tr->temperature -= tr->coolingAmount;
+                    break;
+
+                    case LINEAR_MULTIPLICATIVE_COOLING_PLL:
+                        tr->temperature = tr->startTemp / (1 + tr->coolingAmount * tr->coolingTimes);
+                    break;
+
+                    case EXPONENTIAL_ADDITIVE_COOLING_PLL:
+                    {
+                        double deltaTemp = tr->startTemp - tr->finalTemp;
+                        tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+                    }
+                    break;
+
+                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                        tr->temperature *= tr->coolingAmount;
+                    break;
+                }
+
+                tr->coolingTimes++;
+                tr->stepCount = 0;
+            }
+        } else {
+            if (mp < tr->bestParsimony)
+                bestTreeScoreHits = 1;
+            else if (mp == tr->bestParsimony)
+                bestTreeScoreHits++;
+
+            if ((mp < tr->bestParsimony) ||
+                ((mp == tr->bestParsimony) &&
+                (random_double() <= 1.0 / bestTreeScoreHits))) {
+                    tr->bestParsimony = mp;
+                    tr->insertNode = q;
+                    tr->removeNode = p;
+            }
         }
 
         if (saveBranches)
@@ -2132,9 +2192,9 @@ static void addTraverseParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
         testInsertParsimony(tr, pr, p, q, saveBranches, perSiteScores);
 
     if (((q->number > tr->mxtips)) && ((--maxtrav > 0) || doAll)) {
-        addTraverseParsimony(tr, pr, p, q->next->back, mintrav, maxtrav, doAll,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, q->next->back, mintrav, maxtrav, doAll,
                              saveBranches, perSiteScores);
-        addTraverseParsimony(tr, pr, p, q->next->next->back, mintrav, maxtrav,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, q->next->next->back, mintrav, maxtrav,
                              doAll, saveBranches, perSiteScores);
     }
 }
@@ -2238,16 +2298,16 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             removeNodeParsimony(p);
 
             if ((p1->number > tr->mxtips)) {
-                addTraverseParsimony(tr, pr, p, p1->next->back, mintrav,
+                if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, p1->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                addTraverseParsimony(tr, pr, p, p1->next->next->back, mintrav,
+                if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, p1->next->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
             if ((p2->number > tr->mxtips)) {
-                addTraverseParsimony(tr, pr, p, p2->next->back, mintrav,
+                if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, p2->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                addTraverseParsimony(tr, pr, p, p2->next->next->back, mintrav,
+                if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, p2->next->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
@@ -3190,32 +3250,78 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     unsigned int bestIterationScoreHits = 1;
     randomMP = tr->bestParsimony;
     tr->ntips = tr->mxtips;
-    do {
-        startMP = randomMP;
-        nodeRectifierPars(tr);
-        for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
-            //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
-            //			i = perm[j];
-            tr->insertNode = NULL;
-            tr->removeNode = NULL;
-            bestTreeScoreHits = 1;
 
-            rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
+    if (tr->usingSA) {
+        switch (tr->coolingSchedule)
+        {
+            case LINEAR_ADDITIVE_COOLING_PLL:
+                tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
+            break;
+
+            case LINEAR_MULTIPLICATIVE_COOLING_PLL:
+                tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
+            break;
+
+
+            case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
+            break;
+        }
+
+        bestIterationScoreHits = 1;
+        tr->coolingTimes = 0;
+        tr->temperature = tr->startTemp;
+        tr->stepCount = 0;
+        tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
+        tr->deltaCoefficient = -tr->temperature * log(tr->firstAcceptProbility);
+
+        while (tr->coolingTimes <= tr->maxCoolingTimes) {
+        // nodeRectifierPars(tr, false);
+            startMP = randomMP;
+            nodeRectifierPars(tr);
+            for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                haveChange = false;
+                tr->insertNode = NULL;
+                tr->removeNode = NULL;
+                bestTreeScoreHits = 1;
+
+                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
                                PLL_FALSE, perSiteScores);
-            if (tr->bestParsimony == randomMP)
-                bestIterationScoreHits++;
-            if (tr->bestParsimony < randomMP)
-                bestIterationScoreHits = 1;
-            if (((tr->bestParsimony < randomMP) ||
-                 ((tr->bestParsimony == randomMP) &&
-                  (random_double() <= 1.0 / bestIterationScoreHits))) &&
-                tr->removeNode && tr->insertNode) {
-                restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
-                randomMP = tr->bestParsimony;
+
+                if (haveChange) {
+                    haveChange = false;
+                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
+                    randomMP = tr->bestParsimony;
+                }
             }
         }
-    } while (randomMP < startMP);
+    } else {
+        do {
+            startMP = randomMP;
+            nodeRectifierPars(tr);
+            for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
+                //			i = perm[j];
+                tr->insertNode = NULL;
+                tr->removeNode = NULL;
+                bestTreeScoreHits = 1;
 
+                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
+                               PLL_FALSE, perSiteScores);
+                if (tr->bestParsimony == randomMP)
+                    bestIterationScoreHits++;
+                if (tr->bestParsimony < randomMP)
+                    bestIterationScoreHits = 1;
+                if (((tr->bestParsimony < randomMP) ||
+                    ((tr->bestParsimony == randomMP) &&
+                    (random_double() <= 1.0 / bestIterationScoreHits))) &&
+                    tr->removeNode && tr->insertNode) {
+                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
+                    randomMP = tr->bestParsimony;
+                }
+            }
+        } while (randomMP < startMP);
+    }
     return startMP;
 }
 

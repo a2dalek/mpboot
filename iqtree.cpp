@@ -2297,6 +2297,7 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
             pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
         } else {
+            pllInst->usingSA = params->usingSA;
             pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
         }
@@ -2322,6 +2323,7 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
         pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
       } else {
+        pllInst->usingSA = params->usingSA;
         pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
       }
