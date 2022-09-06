@@ -985,6 +985,7 @@ struct Params {
     double start_temp;
     double final_temp;
     double acceptProbility;
+    bool plusSA;
     /**
             run time of the algorithm
      */

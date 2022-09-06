@@ -1947,6 +1947,7 @@ pllInstance * pllCreateInstance (pllInstanceAttr * attr)
   tr->startTemp = attr->startTemp;
   tr->finalTemp = attr->finalTemp;
   tr->firstAcceptProbility = attr->firstAcceptProbility;
+  tr->plusSA = attr->plusSA;
 
   /* Lock the slave processors at this point */
 #ifdef _FINE_GRAIN_MPI
