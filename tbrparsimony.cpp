@@ -1129,7 +1129,7 @@ static bool restoreTreeRearrangeParsimonyTBR(pllInstance *tr, partitionList *pr,
     r = (r->xPars ? r : r->back);
     assert(pllTbrConnectSubtrees(tr, q, r, &tr->TBR_removeBranch,
                                  tr->TBR_insertNNI));
-    evaluateParsimonyTBR(tr, pr, q, r, tr->TBR_removeBranch, perSiteScores);
+    *tr->parsimonyScore = evaluateParsimonyTBR(tr, pr, q, r, tr->TBR_removeBranch, perSiteScores);
     tr->curRoot = tr->TBR_removeBranch;
     tr->curRootBack = tr->TBR_removeBranch->back;
 
@@ -1987,7 +1987,7 @@ static bool restoreTreeRearrangeParsimonyTBRLeaf(pllInstance *tr,
     assert(tr->TBR_removeBranch->xPars);
     hookupDefault(r, tr->TBR_removeBranch->next);
     hookupDefault(rb, tr->TBR_removeBranch->next->next);
-    evaluateParsimonyTBR(tr, pr, tr->TBR_removeBranch->back, r,
+    *tr->parsimonyScore = evaluateParsimonyTBR(tr, pr, tr->TBR_removeBranch->back, r,
                          tr->TBR_removeBranch, perSiteScores);
     tr->curRoot = tr->TBR_removeBranch;
     tr->curRootBack = tr->TBR_removeBranch->back;
@@ -2102,7 +2102,7 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     randomMP = tr->bestParsimony;
 
     if (tr->plusSA) {
-        
+        cout<<"Begin score: "<<tr->bestParsimony<<endl;
         tr->usingSA = false;
         do {
             nodeRectifierParsVer2(tr, false);
@@ -2163,7 +2163,8 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
             iqtree->cntItersNotImproved = 0;
             iqtree->globalScore = startMP;
         }
-
+        
+        cout<<"Score after hill-climbing: "<<*tr->parsimonyScore<<endl;
         tr->usingSA = true;
 
         switch (tr->coolingSchedule)
@@ -2235,6 +2236,8 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
             }
         }
 
+        cout<<"Score after hill-climbing with SA: "<<*tr->parsimonyScore<<endl;
+        cout<<"Best score: "<<tr->bestParsimony<<endl;
         return startMP;
     }
 

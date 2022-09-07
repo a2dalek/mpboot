@@ -2296,6 +2296,7 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
       if (params->tbr_alternate != -1) {
         if (cnt_tbr_spr_alternate > 0) {
             pllInst->usingSA = params->usingSA;
+            cout<<"Iteration "<<curIt<<":"<<endl;
             pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
         } else {
@@ -2322,6 +2323,7 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
         // cout << "cnt: " << cntItersNotImproved << '\n';
       } else if (params->tbr_pars == true) {
         pllInst->usingSA = params->usingSA;
+        cout<<"Iteration "<<curIt<<":"<<endl;
         pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
       } else {
