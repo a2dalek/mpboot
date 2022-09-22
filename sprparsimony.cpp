@@ -3251,6 +3251,84 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     randomMP = tr->bestParsimony;
     tr->ntips = tr->mxtips;
 
+    if (tr->plusSA) {
+
+        tr->usingSA = false;
+        do {
+            startMP = randomMP;
+            nodeRectifierPars(tr);
+            for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
+                //			i = perm[j];
+                tr->insertNode = NULL;
+                tr->removeNode = NULL;
+                bestTreeScoreHits = 1;
+
+                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
+                               PLL_FALSE, perSiteScores);
+                if (tr->bestParsimony == randomMP)
+                    bestIterationScoreHits++;
+                if (tr->bestParsimony < randomMP)
+                    bestIterationScoreHits = 1;
+                if (((tr->bestParsimony < randomMP) ||
+                    ((tr->bestParsimony == randomMP) &&
+                    (random_double() <= 1.0 / bestIterationScoreHits))) &&
+                    tr->removeNode && tr->insertNode) {
+                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
+                    randomMP = tr->bestParsimony;
+                }
+            }
+        } while (randomMP < startMP);
+
+        tr->usingSA = true;
+
+        switch (tr->coolingSchedule)
+        {
+            case LINEAR_ADDITIVE_COOLING_PLL:
+                tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
+            break;
+
+            case LINEAR_MULTIPLICATIVE_COOLING_PLL:
+                tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
+            break;
+
+
+            case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
+            break;
+        }
+
+        bestIterationScoreHits = 1;
+        tr->coolingTimes = 0;
+        tr->temperature = tr->startTemp;
+        tr->stepCount = 0;
+        tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
+        tr->deltaCoefficient = -tr->temperature * log(tr->firstAcceptProbility);
+
+        while (tr->coolingTimes <= tr->maxCoolingTimes) {
+        // nodeRectifierPars(tr, false);
+            startMP = randomMP;
+            nodeRectifierPars(tr);
+            for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                haveChange = false;
+                tr->insertNode = NULL;
+                tr->removeNode = NULL;
+                bestTreeScoreHits = 1;
+
+                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
+                               PLL_FALSE, perSiteScores);
+
+                if (haveChange) {
+                    haveChange = false;
+                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
+                    randomMP = tr->bestParsimony;
+                }
+            }
+        }
+
+        return startMP;
+    }
+
     if (tr->usingSA) {
         switch (tr->coolingSchedule)
         {
