@@ -3252,7 +3252,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     tr->ntips = tr->mxtips;
 
     if (tr->plusSA) {
-
+        cout<<"Begin score: "<<tr->bestParsimony<<endl;
         tr->usingSA = false;
         do {
             startMP = randomMP;
@@ -3279,7 +3279,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 }
             }
         } while (randomMP < startMP);
-
+        cout<<"Best score after hill-climbing: "<<tr->bestParsimony<<endl;
         tr->usingSA = true;
 
         switch (tr->coolingSchedule)
@@ -3325,11 +3325,13 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 }
             }
         }
-
+        cout<<"Best score after hill-climbing with SA: "<<tr->bestParsimony<<endl;
+        cout<<"Best score: "<<tr->bestParsimony<<endl;
         return startMP;
     }
 
-    if (tr->usingSA) {
+    if (tr->usingSA || tr->pureSA) {
+        if (tr->pureSA) tr->usingSA = true;
         switch (tr->coolingSchedule)
         {
             case LINEAR_ADDITIVE_COOLING_PLL:

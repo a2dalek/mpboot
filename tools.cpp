@@ -887,6 +887,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.maxCoolingTimes = 40;
     params.acceptProbility = 0.075;
     params.plusSA = false;
+    params.pureSA = false;
 
     if (params.nni5) {
         params.nni_type = NNI5;
@@ -2586,6 +2587,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "-plus_sa") == 0) {
                 params.plusSA = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-pure_sa") == 0) {
+                params.pureSA = true;
                 continue;
             }
 

@@ -392,6 +392,7 @@ void IQTree::initTopologyByPLLRandomAdition(Params &params){
   tmpAttr.finalTemp = params.final_temp;
   tmpAttr.firstAcceptProbility = params.acceptProbility;
   tmpAttr.plusSA = params.plusSA;
+  tmpAttr.pureSA = params.pureSA;
 
 #ifdef _OPENMP
     tmpAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
@@ -580,6 +581,7 @@ void IQTree::initializePLL(Params &params) {
   pllAttr.finalTemp = params.final_temp;
   pllAttr.firstAcceptProbility = params.acceptProbility;
   pllAttr.plusSA = params.plusSA;
+  pllAttr.pureSA = params.pureSA;
 #ifdef _OPENMP
   pllAttr.numberOfThreads =
       params.num_threads; /* This only affects the pthreads version */
@@ -2296,11 +2298,12 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
       if (params->tbr_alternate != -1) {
         if (cnt_tbr_spr_alternate > 0) {
             pllInst->usingSA = params->usingSA;
-            cout<<"Iteration "<<curIt<<":"<<endl;
+            if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
             pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
         } else {
             pllInst->usingSA = params->usingSA;
+            if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
             pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
         }
@@ -2323,11 +2326,12 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
         // cout << "cnt: " << cntItersNotImproved << '\n';
       } else if (params->tbr_pars == true) {
         pllInst->usingSA = params->usingSA;
-        cout<<"Iteration "<<curIt<<":"<<endl;
+        if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
         pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
       } else {
         pllInst->usingSA = params->usingSA;
+        if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
         pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
       }

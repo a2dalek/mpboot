@@ -2241,7 +2241,8 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         return startMP;
     }
 
-    if (tr->usingSA) {
+    if (tr->usingSA || tr->pureSA) {
+        if (tr->pureSA) tr->usingSA = true;
         switch (tr->coolingSchedule)
         {
             case LINEAR_ADDITIVE_COOLING_PLL:

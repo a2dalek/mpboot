@@ -356,6 +356,7 @@ typedef struct {
     double finalTemp;
     double firstAcceptProbility;
     pllBoolean plusSA;
+    pllBoolean pureSA;
 } pllInstanceAttr;
 
 /** @brief Stores the recomputation-state of likelihood vectors  */
@@ -1389,6 +1390,7 @@ typedef struct {
     int stepCount;
     pllBoolean usingSA;
     pllBoolean plusSA;
+    pllBoolean pureSA;
 } pllInstance;
 
 /** @brief Stores data related to a NNI move  */
