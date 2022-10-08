@@ -2643,6 +2643,9 @@ static void compressSankoffDNA(pllInstance *tr, partitionList *pr,
                compressedEntriesPadded * states * totalNodes *
                    sizeof(parsimonyNumber));
 
+      //Here, without option -short_off, Numeric is 'usigned short'. So, only first half of array 'informativePtnWgt' is allocated
+      //and we can not directly access this array's elements. A proposed way is creating a reference with type cast:
+      //Numeric *ptnWgt = (Numeric*)pr->partitionData[model]->informativePtnWgt;
         rax_posix_memalign(
             (void **)&(pr->partitionData[model]->informativePtnWgt),
             PLL_BYTE_ALIGNMENT,
@@ -2783,6 +2786,7 @@ static void compressSankoffDNA(pllInstance *tr, partitionList *pr,
             min_ptn_pars[ptn] =
                 dynamic_cast<ParsTree *>(iqtree)->findMstScore(ptn);
 
+    Numeric *ptnWgt = (Numeric*)pr->partitionData[partitionId]->informativePtnWgt;
         for (int seg = 0; seg < pllRepsSegments - 1; seg++) {
             pllRemainderLowerBounds[seg] = 0;
             for (ptn = pllSegmentUpper[seg]; ptn < nptn; ptn++) {
