@@ -2015,7 +2015,8 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                     int tmpBestParsimony = tr->bestParsimony;
                     int tmpMP = mp;
                     int delta = tmpBestParsimony - tmpMP;
-                    double tmp = double(tr->deltaCoefficient * delta)/double(tr->temperature);
+                    double tmp = double(100*delta)/double(tr->deltaCoefficient * tr->temperature);
+                    // tr->deltaCoefficient = tr->deltaCoefficient*0.875 + 0.125*mp;
                     double probability = exp(tmp);
                     if (random_double() <= probability) {
                         haveChange = true;
@@ -3303,7 +3304,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         tr->temperature = tr->startTemp;
         tr->stepCount = 0;
         tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
-        tr->deltaCoefficient = -tr->temperature * log(tr->firstAcceptProbility);
+        tr->deltaCoefficient = tr->bestParsimony - (-iqtree->bestScore) + 1;
 
         while (tr->coolingTimes <= tr->maxCoolingTimes) {
         // nodeRectifierPars(tr, false);
@@ -3353,7 +3354,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         tr->temperature = tr->startTemp;
         tr->stepCount = 0;
         tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
-        tr->deltaCoefficient = -tr->temperature * log(tr->firstAcceptProbility);
+        tr->deltaCoefficient = tr->bestParsimony - (-iqtree->bestScore) + 1;
 
         while (tr->coolingTimes <= tr->maxCoolingTimes) {
         // nodeRectifierPars(tr, false);

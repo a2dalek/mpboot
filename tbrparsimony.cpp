@@ -1265,9 +1265,11 @@ static int pllTestTBRMove(pllInstance *tr, partitionList *pr, nodeptr branch1,
                 int tmpBestParsimony = tr->bestParsimony;
                 int tmpMP = mp;
                 int delta = tmpBestParsimony - tmpMP;
-                double tmp = double(tr->deltaCoefficient * delta)/double(tr->temperature);
+                double tmp = double(1000*delta)/double(tr->deltaCoefficient * tr->temperature);
+                tr->deltaCoefficient = tr->deltaCoefficient*0.875 + 0.125*(-delta);
                 double probability = exp(tmp);
                 if (random_double() <= probability) {
+                    // cout<<fixed<<setprecision(3)<<delta<<" "<<tmp<<" "<<exp(tmp)<<" "<<probability<<" "<<tr->deltaCoefficient<<endl;
                     haveChange = true;
                 } 
             }
@@ -1837,9 +1839,11 @@ static int pllTestTBRMoveLeaf(pllInstance *tr, partitionList *pr,
                 int tmpBestParsimony = tr->bestParsimony;
                 int tmpMP = mp;
                 int delta = tmpBestParsimony - tmpMP;
-                double tmp = double(tr->deltaCoefficient * delta)/double(tr->temperature);
+                double tmp = double(1000*delta)/double(tr->deltaCoefficient * tr->temperature);
+                tr->deltaCoefficient = tr->deltaCoefficient*0.875 + 0.125*(-delta);
                 double probability = exp(tmp);
                 if (random_double() <= probability) {
+                    // cout<<fixed<<setprecision(3)<<delta<<" "<<tmp<<" "<<exp(tmp)<<" "<<probability<<" "<<tr->deltaCoefficient<<endl;
                     haveChange = true;
                 }
             }
@@ -2188,7 +2192,9 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         tr->temperature = tr->startTemp;
         tr->stepCount = 0;
         tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
-        tr->deltaCoefficient = -tr->temperature * log(tr->firstAcceptProbility);
+        tr->deltaCoefficient = 100;
+        // tr->deltaCoefficient = tr->bestParsimony - (-iqtree->bestScore) + 1;
+        // cout<<tr->deltaCoefficient<<endl;
 
         while (tr->coolingTimes <= tr->maxCoolingTimes) {
         // nodeRectifierPars(tr, false);
@@ -2264,7 +2270,9 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         tr->temperature = tr->startTemp;
         tr->stepCount = 0;
         tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
-        tr->deltaCoefficient = -tr->temperature * log(tr->firstAcceptProbility);
+        tr->deltaCoefficient = 100;
+        // tr->deltaCoefficient = tr->bestParsimony - (-iqtree->bestScore) + 1;
+        // cout<<tr->deltaCoefficient<<endl;
 
         while (tr->coolingTimes <= tr->maxCoolingTimes) {
         // nodeRectifierPars(tr, false);
