@@ -1995,7 +1995,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             _evaluateParsimony(tr, pr, p->next->next, PLL_FALSE, perSiteScores);
 
         //		if(globalParam->gbo_replicates > 0 && perSiteScores){
-        if (perSiteScores) {
+        if (perSiteScores && !tr->usingSA) {
             // If UFBoot is enabled ...
             pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
         }
@@ -2003,6 +2003,9 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
         if (tr->usingSA) {
             if (!perSiteScores || (!haveChange)) {
                 if (mp < tr->bestParsimony) {
+                    pllTreeToNewick(tr->tree_string, tr, pr,
+                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                      PLL_SUMMARIZE_LH, 0, 0);
                     tr->bestParsimony = mp;
                     bestTreeScoreHits = 1;
                     haveChange = true;
@@ -2015,8 +2018,9 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                     int tmpBestParsimony = tr->bestParsimony;
                     int tmpMP = mp;
                     int delta = tmpBestParsimony - tmpMP;
-                    double tmp = double(100*delta)/double(tr->deltaCoefficient * tr->temperature);
-                    // tr->deltaCoefficient = tr->deltaCoefficient*0.875 + 0.125*mp;
+                    double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
+                    tr->sumOfDelta += abs(delta);
+                    tr->numOfDelta++;
                     double probability = exp(tmp);
                     if (random_double() <= probability) {
                         haveChange = true;
@@ -2058,6 +2062,10 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 tr->stepCount = 0;
             }
         } else {
+            if (mp > tr->bestParsimony) {
+                tr->numOfDelta++;
+                tr->sumOfDelta += mp - tr->bestParsimony;
+            }
             if (mp < tr->bestParsimony)
                 bestTreeScoreHits = 1;
             else if (mp == tr->bestParsimony)
@@ -2138,7 +2146,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             _evaluateParsimony(tr, pr, p->next->next, PLL_FALSE, perSiteScores);
 
         //		if(globalParam->gbo_replicates > 0 && perSiteScores){
-        if (perSiteScores) {
+        if (perSiteScores && !tr->usingSA) {
             // If UFBoot is enabled ...
             pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
         }
@@ -2273,7 +2281,7 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
     unsigned int mp = _evaluateParsimony(
         tr, pr, p, PLL_FALSE, perSiteScores); // Diep: This is VERY important to
                                               // make sure SPR is accurate*****
-    if (perSiteScores) {
+    if (perSiteScores && !tr->usingSA) {
         // If UFBoot is enabled ...
         pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
     }
@@ -3255,6 +3263,8 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     if (tr->plusSA) {
         cout<<"Begin score: "<<tr->bestParsimony<<endl;
         tr->usingSA = false;
+        tr->numOfDelta = 0;
+        tr->sumOfDelta = 0;
         do {
             startMP = randomMP;
             nodeRectifierPars(tr);
@@ -3280,7 +3290,12 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 }
             }
         } while (randomMP < startMP);
+        
         cout<<"Best score after hill-climbing: "<<tr->bestParsimony<<endl;
+        tr->oldScore = tr->bestParsimony;
+        pllTreeToNewick(tr->tree_string, tr, pr,
+                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                      PLL_SUMMARIZE_LH, 0, 0);
         tr->usingSA = true;
 
         switch (tr->coolingSchedule)
@@ -3304,7 +3319,6 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         tr->temperature = tr->startTemp;
         tr->stepCount = 0;
         tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
-        tr->deltaCoefficient = tr->bestParsimony - (-iqtree->bestScore) + 1;
 
         while (tr->coolingTimes <= tr->maxCoolingTimes) {
         // nodeRectifierPars(tr, false);
@@ -3326,13 +3340,26 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 }
             }
         }
+
+        if (tr->bestParsimony < iqtree->globalScore) {
+            iqtree->cntItersNotImproved = 0;
+            iqtree->globalScore = tr->bestParsimony;
+        }
+
         cout<<"Best score after hill-climbing with SA: "<<tr->bestParsimony<<endl;
-        cout<<"Best score: "<<tr->bestParsimony<<endl;
-        return startMP;
+        char* bestTreeString = tr->tree_string;
+        pllNewickTree *tmpTree = pllNewickParseString(bestTreeString);
+        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
+        pllNewickParseDestroy(&tmpTree);
+
+        return tr->bestParsimony;
     }
 
     if (tr->usingSA || tr->pureSA) {
         if (tr->pureSA) tr->usingSA = true;
+        pllTreeToNewick(tr->tree_string, tr, pr,
+                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                      PLL_SUMMARIZE_LH, 0, 0);
         switch (tr->coolingSchedule)
         {
             case LINEAR_ADDITIVE_COOLING_PLL:
@@ -3354,7 +3381,8 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         tr->temperature = tr->startTemp;
         tr->stepCount = 0;
         tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
-        tr->deltaCoefficient = tr->bestParsimony - (-iqtree->bestScore) + 1;
+        tr->numOfDelta = tr->bestParsimony/200;
+        tr->sumOfDelta = 1;
 
         while (tr->coolingTimes <= tr->maxCoolingTimes) {
         // nodeRectifierPars(tr, false);
@@ -3376,6 +3404,18 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 }
             }
         }
+        
+        if (tr->bestParsimony < iqtree->globalScore) {
+            iqtree->cntItersNotImproved = 0;
+            iqtree->globalScore = tr->bestParsimony;
+        }
+
+        char* bestTreeString = tr->tree_string;
+        pllNewickTree *tmpTree = pllNewickParseString(bestTreeString);
+        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
+        pllNewickParseDestroy(&tmpTree);
+
+        return tr->bestParsimony;
     } else {
         do {
             startMP = randomMP;

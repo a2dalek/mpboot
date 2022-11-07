@@ -987,6 +987,7 @@ struct Params {
     double acceptProbility;
     bool plusSA;
     bool pureSA;
+    bool autoSA;
     /**
             run time of the algorithm
      */

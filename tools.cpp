@@ -882,12 +882,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_init_tree = false;
     params.write_local_optimal_trees = false;
     params.coolingSchedule = LINEAR_ADDITIVE_COOLING;
-    params.start_temp = 20.0;
+    params.start_temp = 0.005;
     params.final_temp = 0.0;
     params.maxCoolingTimes = 40;
     params.acceptProbility = 0.075;
     params.plusSA = false;
     params.pureSA = false;
+    params.autoSA = false;
 
     if (params.nni5) {
         params.nni_type = NNI5;
@@ -2587,6 +2588,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "-plus_sa") == 0) {
                 params.plusSA = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-auto_sa") == 0) {
+                params.autoSA = true;
                 continue;
             }
             if (strcmp(argv[cnt], "-pure_sa") == 0) {

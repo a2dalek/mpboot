@@ -393,6 +393,7 @@ void IQTree::initTopologyByPLLRandomAdition(Params &params){
   tmpAttr.firstAcceptProbility = params.acceptProbility;
   tmpAttr.plusSA = params.plusSA;
   tmpAttr.pureSA = params.pureSA;
+  tmpAttr.autoSA = params.autoSA;
 
 #ifdef _OPENMP
     tmpAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
@@ -582,6 +583,7 @@ void IQTree::initializePLL(Params &params) {
   pllAttr.firstAcceptProbility = params.acceptProbility;
   pllAttr.plusSA = params.plusSA;
   pllAttr.pureSA = params.pureSA;
+  pllAttr.autoSA = params.autoSA;
 #ifdef _OPENMP
   pllAttr.numberOfThreads =
       params.num_threads; /* This only affects the pthreads version */
@@ -1718,13 +1720,19 @@ double IQTree::doTreeSearch() {
   assert(pllInst != NULL);
 
   params->usingSA = false;
+  if (params->autoSA) {
+    params->plusSA = true;
+    numIterationsBetter = 0;
+  }
   /*====================================================
    * MAIN LOOP OF THE IQ-TREE ALGORITHM
    *====================================================*/
   for (; !stop_rule.meetStopCondition(curIt, cur_correlation); curIt++) {
-    // if (curIt > stop_rule.getLastImprovedIteration() + 30) {
-    //   params->usingSA = true;
-    // }
+    
+    if (params->autoSA && curIt==51 && numIterationsBetter<19) {
+        params->plusSA = false;
+    }
+    
     searchinfo.curIter = curIt;
     if (params->cutoff_percent > 100) {
       // old way of updating logl_cutoff
@@ -2298,14 +2306,28 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
       if (params->tbr_alternate != -1) {
         if (cnt_tbr_spr_alternate > 0) {
             pllInst->usingSA = params->usingSA;
+            pllInst->plusSA = params->plusSA;
+            pllInst->pureSA = params->pureSA;
+            if (on_ratchet_hclimb1) {
+              pllInst->plusSA = false;
+              pllInst->pureSA = false;
+            }
             if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
             pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
+            if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony); 
         } else {
             pllInst->usingSA = params->usingSA;
+            pllInst->plusSA = params->plusSA;
+            pllInst->pureSA = params->pureSA;
+            if (on_ratchet_hclimb1) {
+              pllInst->plusSA = false;
+              pllInst->pureSA = false;
+            }
             if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
             pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
+            if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony); 
         }
       } else if (params->tbr_spr == true) {
         if (cntItersNotImproved < params->unsuccess_iteration_hclimb) {
@@ -2326,14 +2348,28 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
         // cout << "cnt: " << cntItersNotImproved << '\n';
       } else if (params->tbr_pars == true) {
         pllInst->usingSA = params->usingSA;
+        pllInst->plusSA = params->plusSA;
+        pllInst->pureSA = params->pureSA;
+        if (on_ratchet_hclimb1) {
+          pllInst->plusSA = false;
+          pllInst->pureSA = false;
+        }
         if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
         pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
+        if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony);
       } else {
         pllInst->usingSA = params->usingSA;
+        pllInst->plusSA = params->plusSA;
+        pllInst->pureSA = params->pureSA;
+        if (on_ratchet_hclimb1) {
+          pllInst->plusSA = false;
+          pllInst->pureSA = false;
+        }
         if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
         pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
+        if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony);
       }
 
       pllNewickParseDestroy(&sprStartTree);
@@ -2719,6 +2755,10 @@ void IQTree::optimizeBootTrees() {
   save_all_trees = 0;
   string saved_tree = getTreeString();
   saved_aln_on_opt_btree = aln;
+  params->plusSA = false;
+  params->pureSA = false;
+  params->usingSA = false;
+  params->autoSA = false;
 
   if (params->opt_btree_spr > 0) {
     params->spr_parsimony = true;

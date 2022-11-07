@@ -357,6 +357,7 @@ typedef struct {
     double firstAcceptProbility;
     pllBoolean plusSA;
     pllBoolean pureSA;
+    pllBoolean autoSA;
 } pllInstanceAttr;
 
 /** @brief Stores the recomputation-state of likelihood vectors  */
@@ -1318,6 +1319,9 @@ typedef struct {
     unsigned int bestParsimony;
     unsigned int *parsimonyScore;
 
+
+    unsigned int oldScore;
+
     double bestOfNode;
     nodeptr removeNode; /**< the node that has been removed. Together with \a
                            insertNode represents an SPR move */
@@ -1391,6 +1395,9 @@ typedef struct {
     pllBoolean usingSA;
     pllBoolean plusSA;
     pllBoolean pureSA;
+    pllBoolean autoSA;
+    unsigned long long sumOfDelta;
+    unsigned long long numOfDelta;
 } pllInstance;
 
 /** @brief Stores data related to a NNI move  */
