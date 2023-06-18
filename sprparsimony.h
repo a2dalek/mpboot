@@ -32,7 +32,11 @@ void _pllFreeParsimonyDataStructures(pllInstance *tr, partitionList *pr);
  * @return best parsimony score found
  */
 int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
-                            int maxtrav, IQTree *_iqtree);
+                            int maxtrav, IQTree *_iqtree, int &perSiteScores, unsigned int &randomMP,
+                            unsigned int &startMP, bool &is_first_loop, unsigned int &bestIterationScoreHits);
+
+void pllCheckIterImprove(pllInstance *tr);
+
 int pllOptimizeSprParsimonyMix(pllInstance *tr, partitionList *pr, int mintrav,
                             int maxtrav, IQTree *_iqtree);
 

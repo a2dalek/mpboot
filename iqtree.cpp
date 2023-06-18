@@ -32,6 +32,7 @@
 #include "vectorclass/vectorclass.h"
 #include "vectorclass/vectormath_common.h"
 #include <numeric>
+#include "hillclimbing.h"
 
 Params *globalParam;
 Alignment *globalAlignment;
@@ -2325,8 +2326,8 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
               pllInst->pureSA = false;
             }
             if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
-            pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
-                                max_spr_rad, this);
+            pllOptimizeParsimony(pllInst, pllPartitions, params->spr_mintrav,
+                                max_spr_rad, this, OptimizeMethod::SPR);
             if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony); 
         }
       } else if (params->tbr_spr == true) {
@@ -2367,8 +2368,8 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
           pllInst->pureSA = false;
         }
         if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
-        pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
-                                max_spr_rad, this);
+        pllOptimizeParsimony(pllInst, pllPartitions, params->spr_mintrav,
+                                max_spr_rad, this, OptimizeMethod::SPR);
         if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony);
       }
 
