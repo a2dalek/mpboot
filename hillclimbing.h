@@ -10,6 +10,6 @@ enum class OptimizeMethod {
 };
 
 void pllOptimizeParsimony(pllInstance *tr, partitionList *pr, int mintrav,
-                            int maxtrav, IQTree *_iqtree, OptimizeMethod method);
+                            int maxtrav, IQTree *_iqtree, OptimizeMethod _method);
 
 #endif

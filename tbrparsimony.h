@@ -17,9 +17,16 @@
  * @return best parsimony score found
  */
 int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
-                            int maxtrav, IQTree *iqtree);
+                  int maxtrav, IQTree *_iqtree, int &perSiteScores, unsigned int &randomMP,
+                  unsigned int &startMP, unsigned int &bestIterationScoreHits);
 int pllOptimizeTbrParsimonyMix(pllInstance *tr, partitionList *pr, int mintrav,
                             int maxtrav, IQTree *iqtree);
+
+void InitPllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
+                  int maxtrav, IQTree *_iqtree, int &perSiteScores, unsigned int &randomMP,
+                  unsigned int &startMP, unsigned int &bestIterationScoreHits);
+
+void pllCheckIterImproveTBR(pllInstance *tr);
 
 void pllComputeRandomizedStepwiseAdditionParsimonyTreeTBR(
     pllInstance *tr, partitionList *partitions, int tbr_mintrav,

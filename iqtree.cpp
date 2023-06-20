@@ -2313,9 +2313,8 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
               pllInst->plusSA = false;
               pllInst->pureSA = false;
             }
-            if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
-            pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
-                                params->tbr_maxtrav, this);
+            pllOptimizeParsimony(pllInst, pllPartitions, params->tbr_mintrav,
+                                params->tbr_maxtrav, this, OptimizeMethod::TBR);
             if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony); 
         } else {
             pllInst->usingSA = params->usingSA;
@@ -2325,7 +2324,6 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
               pllInst->plusSA = false;
               pllInst->pureSA = false;
             }
-            if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
             pllOptimizeParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this, OptimizeMethod::SPR);
             if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony); 
@@ -2355,9 +2353,8 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
           pllInst->plusSA = false;
           pllInst->pureSA = false;
         }
-        if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
-        pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
-                                params->tbr_maxtrav, this);
+        pllOptimizeParsimony(pllInst, pllPartitions, params->tbr_mintrav,
+                                params->tbr_maxtrav, this, OptimizeMethod::TBR);
         if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony);
       } else {
         pllInst->usingSA = params->usingSA;
@@ -2367,7 +2364,6 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
           pllInst->plusSA = false;
           pllInst->pureSA = false;
         }
-        if (pllInst->plusSA) cout<<"Iteration "<<curIt<<":"<<endl;
         pllOptimizeParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this, OptimizeMethod::SPR);
         if (params->autoSA && params->plusSA) numIterationsBetter += (pllInst->oldScore > pllInst->bestParsimony);

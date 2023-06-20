@@ -1,73 +1,72 @@
 #include "hillclimbing.h"
 #include "sprparsimony.h"
 #include "tbrparsimony.h"
+#include "simulatedAnnealing.h"
 
-void hillClimbing(pllInstance *tr, partitionList *pr, int mintrav,
-                  int maxtrav, IQTree *_iqtree, OptimizeMethod method,
-                  int &perSiteScores, unsigned int &randomMP,
-                  unsigned int &startMP, bool &is_first_loop, unsigned int &bestIterationScoreHits) {
+OptimizeMethod method;
+
+bool checkContinue(pllInstance *tr, unsigned int &randomMP, unsigned int &startMP) {
+    if (tr->usingSA) {
+        return checkContinueSA(tr);
+    } else {
+        return randomMP < startMP;
+    }
+}
+
+void doHillClimbing(pllInstance *tr, partitionList *pr, int mintrav,
+                  int maxtrav, IQTree *_iqtree, int &perSiteScores, unsigned int &randomMP,
+                  unsigned int &startMP, unsigned int &bestIterationScoreHits) {
+    do {
+        if (method == OptimizeMethod::TBR) {
+            pllOptimizeTbrParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
+        } else {
+            pllOptimizeSprParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
+        }
+    } while (checkContinue(tr, randomMP, startMP));
+}
+
+void InitPllOptimizeParsimony(pllInstance *tr, partitionList *pr, int mintrav,
+                  int maxtrav, IQTree *_iqtree, int &perSiteScores, unsigned int &randomMP,
+                  unsigned int &startMP, unsigned int &bestIterationScoreHits) {
 
     if (method == OptimizeMethod::TBR) {
-
+        InitPllOptimizeTbrParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
     } else if (method == OptimizeMethod::SPR) {
-        if (tr->pureSA) tr->usingSA = true;
-        pllTreeToNewick(tr->tree_string, tr, pr,
-                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
-                      PLL_SUMMARIZE_LH, 0, 0);
-        switch (tr->coolingSchedule)
-        {
-            case LINEAR_ADDITIVE_COOLING_PLL:
-                tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
-            break;
+        InitPllOptimizeSprParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
+    }
+}
 
-            case LINEAR_MULTIPLICATIVE_COOLING_PLL:
-                tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
-            break;
-
-
-            case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
-                tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
-            break;
-        }
-
-        bestIterationScoreHits = 1;
-        tr->coolingTimes = 0;
-        tr->temperature = tr->startTemp;
-        tr->stepCount = 0;
-        tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
-        tr->numOfDelta = tr->bestParsimony/200;
-        tr->sumOfDelta = 1;
-
-        if (tr->usingSA) {
-            while (tr->coolingTimes <= tr->maxCoolingTimes) {
-                pllOptimizeSprParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, is_first_loop, bestIterationScoreHits);
-            }
-        } else {
-            pllOptimizeSprParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, is_first_loop, bestIterationScoreHits);
-        }
-
-        pllCheckIterImprove(tr);
-
-        char* bestTreeString = tr->tree_string;
-        pllNewickTree *tmpTree = pllNewickParseString(bestTreeString);
-        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
-        pllNewickParseDestroy(&tmpTree);
+void pllCheckIterImprove(pllInstance *tr) {
+    if (method == OptimizeMethod::TBR) {
+        pllCheckIterImproveTBR(tr);
+    } else if (method == OptimizeMethod::SPR) {
+        pllCheckIterImproveSPR(tr);
     }
 }
 
 void pllOptimizeParsimony(pllInstance *tr, partitionList *pr, int mintrav,
-                            int maxtrav, IQTree *_iqtree, OptimizeMethod method) {
-
+                            int maxtrav, IQTree *_iqtree, OptimizeMethod _method) {
+                        
     int perSiteScores;
     unsigned int randomMP, startMP, bestIterationScoreHits;
 
-    bool is_first_loop = true;
+    method = _method;
 
+    InitPllOptimizeParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
     if (tr->plusSA) {
+        doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
+        InitSA(tr, pr, bestIterationScoreHits, maxtrav);
+        doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
 
+        pllCheckIterImprove(tr);
+        applyBestTree(tr);
     } else if (tr->pureSA) {
-        hillClimbing(tr, pr, mintrav, maxtrav, _iqtree, method, perSiteScores, randomMP, startMP, is_first_loop, bestIterationScoreHits);
+        InitSA(tr, pr, bestIterationScoreHits, maxtrav);
+        doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
+
+        pllCheckIterImprove(tr);
+        applyBestTree(tr);
     } else {
-        hillClimbing(tr, pr, mintrav, maxtrav, _iqtree, method, perSiteScores, randomMP, startMP, is_first_loop, bestIterationScoreHits);
+        doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
     }
 }

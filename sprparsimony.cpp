@@ -7,6 +7,7 @@
 #include "sprparsimony.h"
 #include "parstree.h"
 #include <string>
+#include "simulatedAnnealing.h"
 /**
  * PLL (version 1.0.0) a software library for phylogenetic inference
  * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
@@ -2001,65 +2002,11 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
         }
         
         if (tr->usingSA) {
-            if (!perSiteScores || (!haveChange)) {
-                if (mp < tr->bestParsimony) {
-                    pllTreeToNewick(tr->tree_string, tr, pr,
-                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
-                      PLL_SUMMARIZE_LH, 0, 0);
-                    tr->bestParsimony = mp;
-                    bestTreeScoreHits = 1;
-                    haveChange = true;
-                } else if (mp == tr->bestParsimony) {
-                    bestTreeScoreHits++;
-                    if (random_double() < (double)1/bestTreeScoreHits) {
-                        haveChange = true;
-                    }
-                } else if (tr->temperature >= tr->finalTemp) {
-                    int tmpBestParsimony = tr->bestParsimony;
-                    int tmpMP = mp;
-                    int delta = tmpBestParsimony - tmpMP;
-                    double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
-                    tr->sumOfDelta += abs(delta);
-                    tr->numOfDelta++;
-                    double probability = exp(tmp);
-                    if (random_double() <= probability) {
-                        haveChange = true;
-                    } 
-                }
+            checkAcceptTree(tr, pr, perSiteScores, haveChange, mp, bestTreeScoreHits);
 
-                if (haveChange) {
-                    tr->insertNode = q;
-                    tr->removeNode = p;
-                }
-            }
-
-            tr->stepCount++; 
-
-            if (tr->stepCount == tr->limitTrees)  {
-                switch (tr->coolingSchedule)
-                {
-                    case LINEAR_ADDITIVE_COOLING_PLL:
-                        tr->temperature -= tr->coolingAmount;
-                    break;
-
-                    case LINEAR_MULTIPLICATIVE_COOLING_PLL:
-                        tr->temperature = tr->startTemp / (1 + tr->coolingAmount * tr->coolingTimes);
-                    break;
-
-                    case EXPONENTIAL_ADDITIVE_COOLING_PLL:
-                    {
-                        double deltaTemp = tr->startTemp - tr->finalTemp;
-                        tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
-                    }
-                    break;
-
-                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
-                        tr->temperature *= tr->coolingAmount;
-                    break;
-                }
-
-                tr->coolingTimes++;
-                tr->stepCount = 0;
+            if (haveChange) {
+                tr->insertNode = q;
+                tr->removeNode = p;
             }
         } else {
             if (mp > tr->bestParsimony) {
@@ -3193,6 +3140,46 @@ void _pllComputeRandomizedStepwiseAdditionParsimonyTree(
     doing_stepwise_addition = false;
     //	cout << "Done free..." << endl;
 }
+
+void InitPllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
+                  int maxtrav, IQTree *_iqtree, int &perSiteScores, unsigned int &randomMP,
+                  unsigned int &startMP, unsigned int &bestIterationScoreHits) {
+    
+    perSiteScores = globalParam->gbo_replicates > 0;
+    iqtree = _iqtree; // update pointer to IQTree
+
+    if (globalParam->ratchet_iter >= 0 &&
+        (iqtree->on_ratchet_hclimb1 || iqtree->on_ratchet_hclimb2)) {
+        // oct 23: in non-ratchet iteration, allocate is not triggered
+        _updateInternalPllOnRatchet(tr, pr);
+        // called once if not running ratchet
+        _allocateParsimonyDataStructures(tr, pr, perSiteScores);
+    } else if (first_call || (iqtree && iqtree->on_opt_btree))
+        _allocateParsimonyDataStructures(tr, pr, perSiteScores);
+
+    if (first_call) {
+        first_call = false;
+    }
+
+    assert(!tr->constrained);
+
+    nodeRectifierPars(tr);
+    tr->bestParsimony = UINT_MAX;
+    tr->bestParsimony =
+        _evaluateParsimony(tr, pr, tr->start, PLL_TRUE, perSiteScores);
+    // cout << "STARTING SCORE: " << tr->bestParsimony << '\n';
+    assert(-iqtree->curScore == tr->bestParsimony);
+
+    bestIterationScoreHits = 1;
+    randomMP = tr->bestParsimony;
+    tr->ntips = tr->mxtips;
+
+    if (tr->plusSA) {
+        tr->numOfDelta = 0;
+        tr->sumOfDelta = 0;
+    }
+}
+
 /**
  * DTH: optimize whatever tree is stored in tr by parsimony SPR
  * @param tr: the tree instance :)
@@ -3202,190 +3189,47 @@ void _pllComputeRandomizedStepwiseAdditionParsimonyTree(
  */
 int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                   int maxtrav, IQTree *_iqtree, int &perSiteScores, unsigned int &randomMP,
-                  unsigned int &startMP, bool &is_first_loop, unsigned int &bestIterationScoreHits) {
-
-    if (is_first_loop) {
-        perSiteScores = globalParam->gbo_replicates > 0;
-        iqtree = _iqtree; // update pointer to IQTree
-
-        if (globalParam->ratchet_iter >= 0 &&
-         (iqtree->on_ratchet_hclimb1 || iqtree->on_ratchet_hclimb2)) {
-            // oct 23: in non-ratchet iteration, allocate is not triggered
-            _updateInternalPllOnRatchet(tr, pr);
-            // called once if not running ratchet
-            _allocateParsimonyDataStructures(tr, pr, perSiteScores);
-        } else if (first_call || (iqtree && iqtree->on_opt_btree))
-            _allocateParsimonyDataStructures(tr, pr, perSiteScores);
-
-        if (first_call) {
-            first_call = false;
-        }
-
-        assert(!tr->constrained);
-
-        nodeRectifierPars(tr);
-        tr->bestParsimony = UINT_MAX;
-        tr->bestParsimony =
-            _evaluateParsimony(tr, pr, tr->start, PLL_TRUE, perSiteScores);
-        // cout << "STARTING SCORE: " << tr->bestParsimony << '\n';
-        assert(-iqtree->curScore == tr->bestParsimony);
-
-        bestIterationScoreHits = 1;
-        randomMP = tr->bestParsimony;
-        tr->ntips = tr->mxtips;
-
-        is_first_loop = false;
-    }
-
+                  unsigned int &startMP, unsigned int &bestIterationScoreHits) {
     int i, j;
 
-     if (tr->plusSA) {
-        cout<<"Begin score: "<<tr->bestParsimony<<endl;
-        tr->usingSA = false;
-        tr->numOfDelta = 0;
-        tr->sumOfDelta = 0;
-        do {
-            startMP = randomMP;
-            nodeRectifierPars(tr);
-            for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
-                //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
-                //			i = perm[j];
-                tr->insertNode = NULL;
-                tr->removeNode = NULL;
-                bestTreeScoreHits = 1;
+    startMP = randomMP;
+    nodeRectifierPars(tr);
+    for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
+        if (tr->usingSA) haveChange = false; 
+        tr->insertNode = NULL;
+        tr->removeNode = NULL;
+        bestTreeScoreHits = 1;
 
-                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                               PLL_FALSE, perSiteScores);
-                if (tr->bestParsimony == randomMP)
-                    bestIterationScoreHits++;
-                if (tr->bestParsimony < randomMP)
-                    bestIterationScoreHits = 1;
-                if (((tr->bestParsimony < randomMP) ||
-                    ((tr->bestParsimony == randomMP) &&
-                    (random_double() <= 1.0 / bestIterationScoreHits))) &&
-                    tr->removeNode && tr->insertNode) {
-                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
-                    randomMP = tr->bestParsimony;
-                }
-            }
-        } while (randomMP < startMP);
+        rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
+                        PLL_FALSE, perSiteScores);
         
-        cout<<"Best score after hill-climbing: "<<tr->bestParsimony<<endl;
-        tr->oldScore = tr->bestParsimony;
-        pllTreeToNewick(tr->tree_string, tr, pr,
-                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
-                      PLL_SUMMARIZE_LH, 0, 0);
-        tr->usingSA = true;
-
-        switch (tr->coolingSchedule)
-        {
-            case LINEAR_ADDITIVE_COOLING_PLL:
-                tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
-            break;
-
-            case LINEAR_MULTIPLICATIVE_COOLING_PLL:
-                tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
-            break;
-
-
-            case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
-                tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
-            break;
-        }
-
-        bestIterationScoreHits = 1;
-        tr->coolingTimes = 0;
-        tr->temperature = tr->startTemp;
-        tr->stepCount = 0;
-        tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
-
-        while (tr->coolingTimes <= tr->maxCoolingTimes) {
-        // nodeRectifierPars(tr, false);
-            startMP = randomMP;
-            nodeRectifierPars(tr);
-            for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
-                haveChange = false;
-                tr->insertNode = NULL;
-                tr->removeNode = NULL;
-                bestTreeScoreHits = 1;
-
-                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                               PLL_FALSE, perSiteScores);
-
-                if (haveChange) {
-                    haveChange = false;
-                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
-                    randomMP = tr->bestParsimony;
-                }
-            }
-        }
-
-        if (tr->bestParsimony < iqtree->globalScore) {
-            iqtree->cntItersNotImproved = 0;
-            iqtree->globalScore = tr->bestParsimony;
-        }
-
-        cout<<"Best score after hill-climbing with SA: "<<tr->bestParsimony<<endl;
-        char* bestTreeString = tr->tree_string;
-        pllNewickTree *tmpTree = pllNewickParseString(bestTreeString);
-        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
-        pllNewickParseDestroy(&tmpTree);
-
-        return tr->bestParsimony;
-     }
-
-     if (tr->usingSA || tr->pureSA) {
-        startMP = randomMP;
-        nodeRectifierPars(tr);
-        for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
-            haveChange = false;
-            tr->insertNode = NULL;
-            tr->removeNode = NULL;
-            bestTreeScoreHits = 1;
-
-            rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                                PLL_FALSE, perSiteScores);
-
+        if (tr->usingSA) {
             if (haveChange) {
                 haveChange = false;
                 restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
                 randomMP = tr->bestParsimony;
-             }
-         }
-    } else {
-        do {
-            startMP = randomMP;
-            nodeRectifierPars(tr);
-            for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
-                //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
-                //			i = perm[j];
-                tr->insertNode = NULL;
-                tr->removeNode = NULL;
-                bestTreeScoreHits = 1;
-
-                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                               PLL_FALSE, perSiteScores);
-                if (tr->bestParsimony == randomMP)
-                    bestIterationScoreHits++;
-                if (tr->bestParsimony < randomMP)
-                    bestIterationScoreHits = 1;
-                if (((tr->bestParsimony < randomMP) ||
-                    ((tr->bestParsimony == randomMP) &&
-                    (random_double() <= 1.0 / bestIterationScoreHits))) &&
-                    tr->removeNode && tr->insertNode) {
+            }
+        } else {
+            if (tr->bestParsimony == randomMP)
+                bestIterationScoreHits++;
+            if (tr->bestParsimony < randomMP)
+                bestIterationScoreHits = 1;
+            if (((tr->bestParsimony < randomMP) ||
+                ((tr->bestParsimony == randomMP) &&
+                (random_double() <= 1.0 / bestIterationScoreHits))) &&
+                tr->removeNode && tr->insertNode) {
                     restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
                     randomMP = tr->bestParsimony;
-                }
             }
-        } while (randomMP < startMP);
+        }
     }
     return startMP;
 }
 
-void pllCheckIterImprove(pllInstance *tr) {
+void pllCheckIterImproveSPR(pllInstance *tr) {
     if (tr->bestParsimony < iqtree->globalScore) {
-            iqtree->cntItersNotImproved = 0;
-            iqtree->globalScore = tr->bestParsimony;
+        iqtree->cntItersNotImproved = 0;
+        iqtree->globalScore = tr->bestParsimony;
     }
 }
 

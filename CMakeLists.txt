@@ -389,6 +389,7 @@ sprparsimony.cpp
 tbrparsimony.cpp
 test.cpp
 hillclimbing.cpp
+simulatedAnnealing.cpp
 )
 
 ##################################################################
