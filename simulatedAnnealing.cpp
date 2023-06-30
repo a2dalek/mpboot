@@ -23,8 +23,8 @@ void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScore
 
     
     if (tr->pureSA) {
-        tr->numOfDelta = tr->bestParsimony/200;
-        tr->sumOfDelta = 1;
+        tr->numOfDelta = 1; 
+        tr->sumOfDelta = tr->bestParsimony/200;
     }
 
     bestIterationScoreHits = 1;
