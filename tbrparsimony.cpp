@@ -1242,7 +1242,7 @@ static int pllTestTBRMove(pllInstance *tr, partitionList *pr, nodeptr branch1,
     tr->curRoot = TBR_removeBranch;
     tr->curRootBack = TBR_removeBranch->back;
 
-    if (perSiteScores && !tr->usingSA) {
+    if (perSiteScores) {
         // If UFBoot is enabled ...
         pllSaveCurrentTreeTBRParsimony(tr, pr, mp); // run UFBoot
     }
@@ -1410,13 +1410,13 @@ static void pllTraverseUpdateTBRVer2P(pllInstance *tr, partitionList *pr,
                                       nodeptr p, nodeptr q, nodeptr *r,
                                       int mintrav, int maxtrav, int distP,
                                       int distQ, int perSiteScores) {
-    if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2Q(tr, pr, p, q, r, mintrav, maxtrav, distP, distQ,
+    if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2Q(tr, pr, p, q, r, mintrav, maxtrav, distP, distQ,
                               perSiteScores);
     /* traverse the p subtree */
     if ((!isTip(p->number, tr->mxtips)) && (maxtrav - 1 >= 0)) {
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p->next->back, q, r, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p->next->back, q, r, mintrav - 1,
                                   maxtrav - 1, distP + 1, distQ, perSiteScores);
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p->next->next->back, q, r,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p->next->next->back, q, r,
                                   mintrav - 1, maxtrav - 1, distP + 1, distQ,
                                   perSiteScores);
     }
@@ -1635,33 +1635,33 @@ static int pllComputeTBRVer2(pllInstance *tr, partitionList *pr, nodeptr p,
     assert(pllTbrRemoveBranch(tr, pr, p));
 
     /* recursively traverse and perform TBR */
-    if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p1, q1, &p, mintrav, maxtrav, 0, 0,
+    if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p1, q1, &p, mintrav, maxtrav, 0, 0,
                               perSiteScores);
     if (!isTip(q2->number, tr->mxtips)) {
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p1, q2->next->back, &p, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p1, q2->next->back, &p, mintrav - 1,
                                   maxtrav - 1, 0, 1, perSiteScores);
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p1, q2->next->next->back, &p,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p1, q2->next->next->back, &p,
                                   mintrav - 1, maxtrav - 1, 0, 1,
                                   perSiteScores);
     }
 
     if (!isTip(p2->number, tr->mxtips)) {
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back, q1, &p, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back, q1, &p, mintrav - 1,
                                   maxtrav - 1, 1, 0, perSiteScores);
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back, q1, &p,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back, q1, &p,
                                   mintrav - 1, maxtrav - 1, 1, 0,
                                   perSiteScores);
         if (!isTip(q2->number, tr->mxtips)) {
-            if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back, q2->next->back,
+            if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back, q2->next->back,
                                       &p, mintrav - 2, maxtrav - 2, 1, 1,
                                       perSiteScores);
-            if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back,
+            if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back,
                                       q2->next->next->back, &p, mintrav - 2,
                                       maxtrav - 2, 1, 1, perSiteScores);
-            if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back,
+            if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back,
                                       q2->next->back, &p, mintrav - 2,
                                       maxtrav - 2, 1, 1, perSiteScores);
-            if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back,
+            if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back,
                                       q2->next->next->back, &p, mintrav - 2,
                                       maxtrav - 2, 1, 1, perSiteScores);
         }
@@ -1823,10 +1823,10 @@ static void pllTraverseUpdateTBRLeaf(pllInstance *tr, partitionList *pr,
         }
     }
     if (!isTip(p->number, tr->mxtips) && maxtrav - 1 >= 0) {
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p->next->back, removeBranch,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p->next->back, removeBranch,
                                  mintrav - 1, maxtrav - 1, distP + 1,
                                  perSiteScores);
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p->next->next->back, removeBranch,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p->next->next->back, removeBranch,
                                  mintrav - 1, maxtrav - 1, distP + 1,
                                  perSiteScores);
     }
@@ -1857,16 +1857,16 @@ static int pllComputeTBRLeaf(pllInstance *tr, partitionList *pr, nodeptr p,
     p->next->back = p->next->next->back = NULL;
 
     if (!isTip(p1->number, tr->mxtips)) {
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p1->next->back, p, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p1->next->back, p, mintrav - 1,
                                  maxtrav - 1, 1, perSiteScores);
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p1->next->next->back, p, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p1->next->next->back, p, mintrav - 1,
                                  maxtrav - 1, 1, perSiteScores);
     }
 
     if (!isTip(p2->number, tr->mxtips)) {
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p2->next->back, p, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p2->next->back, p, mintrav - 1,
                                  maxtrav - 1, 1, perSiteScores);
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p2->next->next->back, p, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p2->next->next->back, p, mintrav - 1,
                                  maxtrav - 1, 1, perSiteScores);
     }
 

@@ -75,31 +75,29 @@ void checkDecreaseTemp(pllInstance *tr) {
 }
 
 void checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool& haveChange, unsigned int mp, unsigned long& bestTreeScoreHits) {
-    if (!perSiteScores || (!haveChange)) {
-        if (mp < tr->bestParsimony) {
-            pllTreeToNewick(tr->tree_string, tr, pr,
-                tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
-                PLL_SUMMARIZE_LH, 0, 0);
-            tr->bestParsimony = mp;
-            bestTreeScoreHits = 1;
+    if (mp < tr->bestParsimony) {
+        pllTreeToNewick(tr->tree_string, tr, pr,
+            tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+            PLL_SUMMARIZE_LH, 0, 0);
+        tr->bestParsimony = mp;
+        bestTreeScoreHits = 1;
+        haveChange = true;
+    } else if (mp == tr->bestParsimony) {
+        bestTreeScoreHits++;
+        if (random_double() < (double)1/bestTreeScoreHits) {
             haveChange = true;
-        } else if (mp == tr->bestParsimony) {
-            bestTreeScoreHits++;
-            if (random_double() < (double)1/bestTreeScoreHits) {
-                haveChange = true;
-            }
-        } else if (tr->temperature >= tr->finalTemp) {
-            int tmpBestParsimony = tr->bestParsimony;
-            int tmpMP = mp;
-            int delta = tmpBestParsimony - tmpMP;
-            double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
-            tr->sumOfDelta += abs(delta);
-            tr->numOfDelta++;
-            double probability = exp(tmp);
-            if (random_double() <= probability) {
-                haveChange = true;
-            } 
         }
+    } else if (tr->temperature >= tr->finalTemp) {
+        int tmpBestParsimony = tr->bestParsimony;
+        int tmpMP = mp;
+        int delta = tmpBestParsimony - tmpMP;
+        double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
+        tr->sumOfDelta += abs(delta);
+        tr->numOfDelta++;
+        double probability = exp(tmp);
+        if (random_double() <= probability) {
+            haveChange = true;
+        } 
     }
 
     tr->stepCount++; 

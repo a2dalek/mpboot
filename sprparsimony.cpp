@@ -1996,7 +1996,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             _evaluateParsimony(tr, pr, p->next->next, PLL_FALSE, perSiteScores);
 
         //		if(globalParam->gbo_replicates > 0 && perSiteScores){
-        if (perSiteScores && !tr->usingSA) {
+        if (perSiteScores) {
             // If UFBoot is enabled ...
             pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
         }
@@ -2039,91 +2039,6 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
     return;
 }
 
-static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
-                                nodeptr q, pllBoolean saveBranches,
-                                int perSiteScores, bool &found_better) {
-    if (found_better)
-        return;
-    unsigned int mp;
-
-    nodeptr r = q->back;
-
-    pllBoolean doIt = PLL_TRUE;
-
-    int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
-
-    if (tr->grouped) {
-        int rNumber = tr->constraintVector[r->number],
-            qNumber = tr->constraintVector[q->number],
-            pNumber = tr->constraintVector[p->number];
-
-        doIt = PLL_FALSE;
-
-        if (pNumber == -9)
-            pNumber = checkerPars(tr, p->back);
-        if (pNumber == -9)
-            doIt = PLL_TRUE;
-        else {
-            if (qNumber == -9)
-                qNumber = checkerPars(tr, q);
-
-            if (rNumber == -9)
-                rNumber = checkerPars(tr, r);
-
-            if (pNumber == rNumber || pNumber == qNumber)
-                doIt = PLL_TRUE;
-        }
-    }
-
-    if (doIt) {
-        double *z = (double *)rax_malloc(
-            numBranches * sizeof(double)); // Diep: copy from the latest pllrepo
-                                           // (fastDNAparsimony.c)
-
-        if (saveBranches) {
-            int i;
-
-            for (i = 0; i < numBranches; i++)
-                z[i] = q->z[i];
-        }
-
-        insertParsimony(tr, pr, p, q, perSiteScores);
-
-        mp =
-            _evaluateParsimony(tr, pr, p->next->next, PLL_FALSE, perSiteScores);
-
-        //		if(globalParam->gbo_replicates > 0 && perSiteScores){
-        if (perSiteScores && !tr->usingSA) {
-            // If UFBoot is enabled ...
-            pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
-        }
-
-        if (mp < tr->bestParsimony)
-            bestTreeScoreHits = 1;
-        else if (mp == tr->bestParsimony)
-            bestTreeScoreHits++;
-
-        if ((mp < tr->bestParsimony) ||
-            ((mp == tr->bestParsimony) &&
-             (random_double() <= 1.0 / bestTreeScoreHits))) {
-            tr->bestParsimony = mp;
-            tr->insertNode = q;
-            tr->removeNode = p;
-            found_better = true;
-        }
-
-        if (saveBranches)
-            hookup(q, r, z, numBranches);
-        else
-            hookupDefault(q, r);
-
-        p->next->next->back = p->next->back = (nodeptr)NULL;
-        rax_free(z); // Diep: copy from the latest pllrepo (fastDNAparsimony.c)
-    }
-
-    return;
-}
-
 static void restoreTreeParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                                  nodeptr q, int perSiteScores) {
     nodeptr r = q->back;
@@ -2148,28 +2063,10 @@ static void addTraverseParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
         testInsertParsimony(tr, pr, p, q, saveBranches, perSiteScores);
 
     if (((q->number > tr->mxtips)) && ((--maxtrav > 0) || doAll)) {
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, q->next->back, mintrav, maxtrav, doAll,
+        if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, p, q->next->back, mintrav, maxtrav, doAll,
                              saveBranches, perSiteScores);
-        if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, q->next->next->back, mintrav, maxtrav,
+        if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, p, q->next->next->back, mintrav, maxtrav,
                              doAll, saveBranches, perSiteScores);
-    }
-}
-
-static void addTraverseParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
-                                 nodeptr q, int mintrav, int maxtrav,
-                                 pllBoolean doAll, pllBoolean saveBranches,
-                                 int perSiteScores, bool &found_better) {
-    if (found_better)
-        return;
-    if (doAll || (--mintrav <= 0))
-        testInsertParsimony(tr, pr, p, q, saveBranches, perSiteScores,
-                            found_better);
-
-    if (((q->number > tr->mxtips)) && ((--maxtrav > 0) || doAll)) {
-        addTraverseParsimony(tr, pr, p, q->next->back, mintrav, maxtrav, doAll,
-                             saveBranches, perSiteScores, found_better);
-        addTraverseParsimony(tr, pr, p, q->next->next->back, mintrav, maxtrav,
-                             doAll, saveBranches, perSiteScores, found_better);
     }
 }
 
@@ -2228,7 +2125,7 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
     unsigned int mp = _evaluateParsimony(
         tr, pr, p, PLL_FALSE, perSiteScores); // Diep: This is VERY important to
                                               // make sure SPR is accurate*****
-    if (perSiteScores && !tr->usingSA) {
+    if (perSiteScores) {
         // If UFBoot is enabled ...
         pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
     }
@@ -2254,16 +2151,16 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             removeNodeParsimony(p);
 
             if ((p1->number > tr->mxtips)) {
-                if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, p1->next->back, mintrav,
+                if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, p, p1->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, p1->next->next->back, mintrav,
+                if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, p, p1->next->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
             if ((p2->number > tr->mxtips)) {
-                if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, p2->next->back, mintrav,
+                if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, p, p2->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                if ((!tr->usingSA) || (perSiteScores || !haveChange)) addTraverseParsimony(tr, pr, p, p2->next->next->back, mintrav,
+                if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, p, p2->next->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
