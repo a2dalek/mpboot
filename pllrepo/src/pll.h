@@ -1312,6 +1312,7 @@ typedef struct {
 
     char **nameList;   /**< list of tips names (read from the phylip file) */
     char *tree_string; /**< the newick representaion of the topology */
+    char *best_tree_string_sa;
     char *tree0;
     char *tree1;
     int treeStringLength;
@@ -1398,6 +1399,8 @@ typedef struct {
     pllBoolean autoSA;
     unsigned long long sumOfDelta;
     unsigned long long numOfDelta;
+    unsigned long long cnt1;
+    unsigned long long cnt2;
 } pllInstance;
 
 /** @brief Stores data related to a NNI move  */

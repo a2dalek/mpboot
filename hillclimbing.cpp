@@ -2,6 +2,7 @@
 #include "sprparsimony.h"
 #include "tbrparsimony.h"
 #include "simulatedAnnealing.h"
+#include <iostream>
 
 OptimizeMethod method;
 
@@ -55,17 +56,18 @@ void pllOptimizeParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     InitPllOptimizeParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
     if (tr->plusSA) {
         doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
-        InitSA(tr, pr, bestIterationScoreHits, maxtrav);
+        InitSA(tr, pr, bestIterationScoreHits, maxtrav, (method == OptimizeMethod::TBR));
         doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
 
-        pllCheckIterImprove(tr);
+        // pllCheckIterImprove(tr);
         applyBestTree(tr);
     } else if (tr->pureSA) {
-        InitSA(tr, pr, bestIterationScoreHits, maxtrav);
+        InitSA(tr, pr, bestIterationScoreHits, maxtrav, (method == OptimizeMethod::TBR));
         doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
 
-        pllCheckIterImprove(tr);
+        // pllCheckIterImprove(tr);
         applyBestTree(tr);
+        // std::cout<<tr->cnt1 << " " << tr->cnt2 << "\n";
     } else {
         doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
     }

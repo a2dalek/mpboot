@@ -6,7 +6,7 @@
 #include "iqtree.h"
 #include "pllrepo/src/pll.h"
 
-void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScoreHits, int maxtrav);
+void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScoreHits, int maxtrav, bool usingTBR = false);
 
 bool checkContinueSA(pllInstance *tr);
 

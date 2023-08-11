@@ -1984,6 +1984,7 @@ static void pllTreeInitDefaults (pllInstance * tr, int tips)
   tr->bigCutoff = PLL_FALSE;
   tr->treeStringLength = tr->mxtips * (PLL_NMLNGTH + 128) + 256 + tr->mxtips * 2;
   tr->tree_string = (char *) rax_calloc ( tr->treeStringLength, sizeof(char));
+  tr->best_tree_string_sa = (char *) rax_calloc ( tr->treeStringLength, sizeof(char));
   tr->tree0 = (char*)rax_calloc((size_t)tr->treeStringLength, sizeof(char));
   tr->tree1 = (char*)rax_calloc((size_t)tr->treeStringLength, sizeof(char));
   tr->constraintVector = (int *)rax_malloc((2 * tr->mxtips) * sizeof(int));
@@ -2616,6 +2617,7 @@ pllDestroyInstance (pllInstance * tr)
   rax_free (tr->nodep);
   rax_free (tr->nodeBaseAddress);
   rax_free (tr->tree_string);
+  rax_free (tr->best_tree_string_sa);
   rax_free (tr->tree0);
   rax_free (tr->tree1);
   rax_free (tr->tipNames);

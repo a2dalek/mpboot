@@ -1,8 +1,8 @@
 #include "simulatedAnnealing.h"
 
-void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScoreHits, int maxtrav) {
+void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScoreHits, int maxtrav, bool usingTBR) {
     tr->usingSA = true;
-    pllTreeToNewick(tr->tree_string, tr, pr,
+    pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
                 tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
                 PLL_SUMMARIZE_LH, 0, 0);
     switch (tr->coolingSchedule)
@@ -32,6 +32,8 @@ void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScore
     tr->temperature = tr->startTemp;
     tr->stepCount = 0;
     tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
+
+    if (usingTBR) tr->limitTrees *= maxtrav-1;
 }
 
 bool checkContinueSA(pllInstance *tr) {
@@ -39,7 +41,7 @@ bool checkContinueSA(pllInstance *tr) {
 }
 
 void applyBestTree(pllInstance *tr) {
-    char* bestTreeString = tr->tree_string;
+    char* bestTreeString = tr->best_tree_string_sa;
     pllNewickTree *tmpTree = pllNewickParseString(bestTreeString);
     pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
     pllNewickParseDestroy(&tmpTree);
@@ -76,7 +78,7 @@ void checkDecreaseTemp(pllInstance *tr) {
 
 void checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool& haveChange, unsigned int mp, unsigned long& bestTreeScoreHits) {
     if (mp < tr->bestParsimony) {
-        pllTreeToNewick(tr->tree_string, tr, pr,
+        pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
             tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
             PLL_SUMMARIZE_LH, 0, 0);
         tr->bestParsimony = mp;
@@ -85,6 +87,9 @@ void checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool
     } else if (mp == tr->bestParsimony) {
         bestTreeScoreHits++;
         if (random_double() < (double)1/bestTreeScoreHits) {
+            pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
+                tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                PLL_SUMMARIZE_LH, 0, 0);
             haveChange = true;
         }
     } else if (tr->temperature >= tr->finalTemp) {
@@ -97,6 +102,7 @@ void checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool
         double probability = exp(tmp);
         if (random_double() <= probability) {
             haveChange = true;
+            tr->cnt1++;
         } 
     }
 

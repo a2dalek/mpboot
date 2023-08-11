@@ -2002,6 +2002,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
         }
         
         if (tr->usingSA) {
+            tr->cnt2++;
             checkAcceptTree(tr, pr, perSiteScores, haveChange, mp, bestTreeScoreHits);
 
             if (haveChange) {
@@ -2188,16 +2189,16 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             mintrav2 = mintrav > 2 ? mintrav : 2;
 
             if ((q1->number > tr->mxtips)) {
-                addTraverseParsimony(tr, pr, q, q1->next->back, mintrav2,
+                if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, q, q1->next->back, mintrav2,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                addTraverseParsimony(tr, pr, q, q1->next->next->back, mintrav2,
+                if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, q, q1->next->next->back, mintrav2,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
             if ((q2->number > tr->mxtips)) {
-                addTraverseParsimony(tr, pr, q, q2->next->back, mintrav2,
+                if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, q, q2->next->back, mintrav2,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                addTraverseParsimony(tr, pr, q, q2->next->next->back, mintrav2,
+                if ((!tr->usingSA) || (!haveChange)) addTraverseParsimony(tr, pr, q, q2->next->next->back, mintrav2,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
@@ -3074,6 +3075,7 @@ void InitPllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav
     if (tr->plusSA) {
         tr->numOfDelta = 0;
         tr->sumOfDelta = 0;
+        tr->usingSA = false;
     }
 }
 

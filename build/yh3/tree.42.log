@@ -1,0 +1,12 @@
+MPBoot version 1.1.1 for Linux 64-bit built Jun 13 2023
+Copyright (c) 2016 Diep Thi Hoang, Le Sy Vinh, Tomas Flouri, Alexandros Stamatakis, Arndt von Haeseler and Bui Quang Minh.
+
+Host:    head01.hpc.vast.vn (AVX512F, FMA3, 134 GB RAM)
+Command: ../mpboot-avx -r 500 -rlen 0.02 0.1 0.3 -rzero 0 tree.42
+Seed:    92054 (Using SPRNG - Scalable Parallel Random Number Generator)
+Time:    Sun Jun 18 00:52:39 2023
+Kernel:  AVX
+
+Overwrite tree.42 (y/n)? Generating random Yule-Harding tree...
+1 tree(s) printed to tree.42
+Date and Time: Sun Jun 18 00:52:39 2023

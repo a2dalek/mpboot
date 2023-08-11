@@ -1252,6 +1252,7 @@ static int pllTestTBRMove(pllInstance *tr, partitionList *pr, nodeptr branch1,
     }
 
     if (tr->usingSA) {
+        tr->cnt2++;
         checkAcceptTree(tr, pr, perSiteScores, haveChange, mp, bestTreeScoreHits);
 
         if (haveChange) {
@@ -1305,15 +1306,15 @@ static void pllTraverseUpdateTBRVer1Q(pllInstance *tr, partitionList *pr,
     if (mintravQ <= 0) {
         assert((pllTestTBRMove(tr, pr, p, q, r, perSiteScores, false)));
         if (globalParam->tbr_insert_nni == true) {
-            assert((pllTestTBRMove(tr, pr, p, q, r, perSiteScores, true)));
+            if ((!tr->usingSA) || (!haveChange)) assert((pllTestTBRMove(tr, pr, p, q, r, perSiteScores, true)));
         }
     }
 
     /* traverse the q subtree */
     if ((!isTip(q->number, tr->mxtips)) && (maxtravQ - 1 >= 0)) {
-        pllTraverseUpdateTBRVer1Q(tr, pr, p, q->next->back, r, mintravQ - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1Q(tr, pr, p, q->next->back, r, mintravQ - 1,
                                   maxtravQ - 1, perSiteScores);
-        pllTraverseUpdateTBRVer1Q(tr, pr, p, q->next->next->back, r,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1Q(tr, pr, p, q->next->next->back, r,
                                   mintravQ - 1, maxtravQ - 1, perSiteScores);
     }
 }
@@ -1337,24 +1338,24 @@ static void pllTraverseUpdateTBRVer1P(pllInstance *tr, partitionList *pr,
         // Avoid insert back to where it's cut
         if (mintravP == 0 && mintravQ == 0) {
             if ((!isTip(q->number, tr->mxtips)) && (maxtravQ - 1 >= 0)) {
-                pllTraverseUpdateTBRVer1Q(tr, pr, p, q->next->back, r,
+                if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1Q(tr, pr, p, q->next->back, r,
                                           mintravQ - 1, maxtravQ - 1,
                                           perSiteScores);
-                pllTraverseUpdateTBRVer1Q(tr, pr, p, q->next->next->back, r,
+                if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1Q(tr, pr, p, q->next->next->back, r,
                                           mintravQ - 1, maxtravQ - 1,
                                           perSiteScores);
             }
         } else {
-            pllTraverseUpdateTBRVer1Q(tr, pr, p, q, r, mintravQ, maxtravQ,
+            if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1Q(tr, pr, p, q, r, mintravQ, maxtravQ,
                                       perSiteScores);
         }
     }
     /* traverse the p subtree */
     if (!isTip(p->number, tr->mxtips) && maxtravP - 1 >= 0) {
-        pllTraverseUpdateTBRVer1P(tr, pr, p->next->back, q, r, mintravP - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(tr, pr, p->next->back, q, r, mintravP - 1,
                                   maxtravP - 1, mintravQ, maxtravQ,
                                   perSiteScores);
-        pllTraverseUpdateTBRVer1P(tr, pr, p->next->next->back, q, r,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(tr, pr, p->next->next->back, q, r,
                                   mintravP - 1, maxtravP - 1, mintravQ,
                                   maxtravQ, perSiteScores);
     }
@@ -1378,7 +1379,7 @@ static void pllTraverseUpdateTBRVer2Q(pllInstance *tr, partitionList *pr,
     if (mintrav <= 0) {
         assert((pllTestTBRMove(tr, pr, p, q, r, perSiteScores, false)));
         if (globalParam->tbr_insert_nni == true) {
-            assert((pllTestTBRMove(tr, pr, p, q, r, perSiteScores, true)));
+            if ((!tr->usingSA) || (!haveChange)) assert((pllTestTBRMove(tr, pr, p, q, r, perSiteScores, true)));
         }
         if (globalParam->tbr_test_draw == true) {
             printTravInfo(distP, distQ);
@@ -1387,9 +1388,9 @@ static void pllTraverseUpdateTBRVer2Q(pllInstance *tr, partitionList *pr,
 
     /* traverse the q subtree */
     if ((!isTip(q->number, tr->mxtips)) && (maxtrav - 1 >= 0)) {
-        if (perSiteScores || (!perSiteScores && !haveChange)) pllTraverseUpdateTBRVer2Q(tr, pr, p, q->next->back, r, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2Q(tr, pr, p, q->next->back, r, mintrav - 1,
                                   maxtrav - 1, distP, distQ + 1, perSiteScores);
-        if (perSiteScores || (!perSiteScores && !haveChange)) pllTraverseUpdateTBRVer2Q(tr, pr, p, q->next->next->back, r,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer2Q(tr, pr, p, q->next->next->back, r,
                                   mintrav - 1, maxtrav - 1, distP, distQ + 1,
                                   perSiteScores);
     }
@@ -1433,9 +1434,9 @@ static void pllTraverseUpdateTBRVer3Q(pllInstance *tr, partitionList *pr,
 
     /* traverse the q subtree */
     if (!isTip(q->number, tr->mxtips) && maxtrav - 1 >= 0) {
-        pllTraverseUpdateTBRVer3Q(tr, pr, p, q->next->back, r, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3Q(tr, pr, p, q->next->back, r, mintrav - 1,
                                   maxtrav - 1, perSiteScores);
-        pllTraverseUpdateTBRVer3Q(tr, pr, p, q->next->next->back, r,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3Q(tr, pr, p, q->next->next->back, r,
                                   mintrav - 1, maxtrav - 1, perSiteScores);
     }
 }
@@ -1448,11 +1449,11 @@ static void pllTraverseUpdateTBRVer3P(pllInstance *tr, partitionList *pr,
     // cout << "WHy traverse p\n";
     tr->TBR_removeBranch = NULL;
     tr->TBR_insertBranch1 = tr->TBR_insertBranch2 = NULL;
-    pllTraverseUpdateTBRVer3Q(tr, pr, p, q, r, mintrav, maxtrav, perSiteScores);
+    if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3Q(tr, pr, p, q, r, mintrav, maxtrav, perSiteScores);
     if (!isTip(q->back->number, tr->mxtips) && maxtrav - 1 >= 0) {
-        pllTraverseUpdateTBRVer3Q(tr, pr, p, q->back->next->back, r,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3Q(tr, pr, p, q->back->next->back, r,
                                   mintrav - 1, maxtrav - 1, perSiteScores);
-        pllTraverseUpdateTBRVer3Q(tr, pr, p, q->back->next->next->back, r,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3Q(tr, pr, p, q->back->next->next->back, r,
                                   mintrav - 1, maxtrav - 1, perSiteScores);
     }
     // cout << "Done traverse\n";
@@ -1468,10 +1469,10 @@ static void pllTraverseUpdateTBRVer3P(pllInstance *tr, partitionList *pr,
         pllTbrRemoveBranch(tr, pr, *r);
     }
     if (!isTip(p->number, tr->mxtips) && maxtrav - 1 >= 0) {
-        pllTraverseUpdateTBRVer3P(tr, pr, p->next->back, q, r, bestIns1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3P(tr, pr, p->next->back, q, r, bestIns1,
                                   bestIns2, mintrav - 1, maxtrav - 1,
                                   perSiteScores);
-        pllTraverseUpdateTBRVer3P(tr, pr, p->next->next->back, q, r, bestIns1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3P(tr, pr, p->next->next->back, q, r, bestIns1,
                                   bestIns2, mintrav - 1, maxtrav - 1,
                                   perSiteScores);
     }
@@ -1535,34 +1536,34 @@ static int pllComputeTBRVer1(pllInstance *tr, partitionList *pr, nodeptr p,
     assert(p1->back == p2 && p2->back == p1);
 
     /* recursively traverse and perform TBR */
-    pllTraverseUpdateTBRVer1P(tr, pr, p1, q1, &p, mintrav, maxtrav, mintrav,
+    if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(tr, pr, p1, q1, &p, mintrav, maxtrav, mintrav,
                               maxtrav, perSiteScores);
     if (!isTip(q2->number, tr->mxtips)) {
-        pllTraverseUpdateTBRVer1P(tr, pr, p1, q2->next->back, &p, mintrav,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(tr, pr, p1, q2->next->back, &p, mintrav,
                                   maxtrav, mintrav - 1, maxtrav - 1,
                                   perSiteScores);
-        pllTraverseUpdateTBRVer1P(tr, pr, p1, q2->next->next->back, &p, mintrav,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(tr, pr, p1, q2->next->next->back, &p, mintrav,
                                   maxtrav, mintrav - 1, maxtrav - 1,
                                   perSiteScores);
     }
 
     if (!isTip(p2->number, tr->mxtips)) {
-        pllTraverseUpdateTBRVer1P(tr, pr, p2->next->back, q1, &p, mintrav - 1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(tr, pr, p2->next->back, q1, &p, mintrav - 1,
                                   maxtrav - 1, mintrav, maxtrav, perSiteScores);
-        pllTraverseUpdateTBRVer1P(tr, pr, p2->next->next->back, q1, &p,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(tr, pr, p2->next->next->back, q1, &p,
                                   mintrav - 1, maxtrav - 1, mintrav, maxtrav,
                                   perSiteScores);
         if (!isTip(q2->number, tr->mxtips)) {
-            pllTraverseUpdateTBRVer1P(tr, pr, p2->next->back, q2->next->back,
+            if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(tr, pr, p2->next->back, q2->next->back,
                                       &p, mintrav - 1, maxtrav - 1, mintrav - 1,
                                       maxtrav - 1, perSiteScores);
-            pllTraverseUpdateTBRVer1P(
+            if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(
                 tr, pr, p2->next->back, q2->next->next->back, &p, mintrav - 1,
                 maxtrav - 1, mintrav - 1, maxtrav - 1, perSiteScores);
-            pllTraverseUpdateTBRVer1P(
+            if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(
                 tr, pr, p2->next->next->back, q2->next->back, &p, mintrav - 1,
                 maxtrav - 1, mintrav - 1, maxtrav - 1, perSiteScores);
-            pllTraverseUpdateTBRVer1P(tr, pr, p2->next->next->back,
+            if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer1P(tr, pr, p2->next->next->back,
                                       q2->next->next->back, &p, mintrav - 1,
                                       maxtrav - 1, mintrav - 1, maxtrav - 1,
                                       perSiteScores);
@@ -1736,12 +1737,12 @@ static int pllComputeTBRVer3(pllInstance *tr, partitionList *pr, nodeptr p,
     bestIns2 = &q1;
 
     /* recursively traverse and perform TBR */
-    pllTraverseUpdateTBRVer3P(tr, pr, p1, q1, &p, bestIns1, bestIns2, mintrav,
+    if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3P(tr, pr, p1, q1, &p, bestIns1, bestIns2, mintrav,
                               maxtrav, perSiteScores);
     if (!isTip(p2->number, tr->mxtips)) {
-        pllTraverseUpdateTBRVer3P(tr, pr, p2->next->back, q1, &p, bestIns1,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3P(tr, pr, p2->next->back, q1, &p, bestIns1,
                                   bestIns2, mintrav, maxtrav, perSiteScores);
-        pllTraverseUpdateTBRVer3P(tr, pr, p2->next->next->back, q1, &p,
+        if ((!tr->usingSA) || (!haveChange)) pllTraverseUpdateTBRVer3P(tr, pr, p2->next->next->back, q1, &p,
                                   bestIns1, bestIns2, mintrav, maxtrav,
                                   perSiteScores);
     }
@@ -1778,6 +1779,7 @@ static int pllTestTBRMoveLeaf(pllInstance *tr, partitionList *pr,
     }
 
     if (tr->usingSA) {
+        tr->cnt2++;
         checkAcceptTree(tr, pr, perSiteScores, haveChange, mp, bestTreeScoreHits);
 
         if (haveChange) {
@@ -2009,6 +2011,13 @@ void InitPllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav
 
     bestIterationScoreHits = 1;
     randomMP = tr->bestParsimony;
+    tr->ntips = tr->mxtips;
+
+    if (tr->plusSA) {
+        tr->numOfDelta = 0;
+        tr->sumOfDelta = 0;
+        tr->usingSA = false;
+    }
 }
 
 int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
@@ -2018,6 +2027,7 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     nodeRectifierParsVer2(tr, false);
     startMP = randomMP;
     for (int i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+        if (tr->usingSA) haveChange = false;
         bool isLeaf = isTip(tr->nodep_dfs[i]->number, tr->mxtips) ||
                     isTip(tr->nodep_dfs[i]->back->number, tr->mxtips);
         if (isLeaf || globalParam->tbr_restore_ver2 == false) {

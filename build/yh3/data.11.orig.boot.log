@@ -1,0 +1,647 @@
+MPBoot version 1.1.1 for Linux 64-bit built Jun 13 2023
+Copyright (c) 2016 Diep Thi Hoang, Le Sy Vinh, Tomas Flouri, Alexandros Stamatakis, Arndt von Haeseler and Bui Quang Minh.
+
+Host:    head01.hpc.vast.vn (AVX512F, FMA3, 134 GB RAM)
+Command: ./mpboot-avx -s ./yh3/data.11 -bb 1000 -keep_ident -pure_sa -cooling_schedule 0 -pre ./yh3/data.11.orig.boot -seed 213
+Seed:    213 (Using SPRNG - Scalable Parallel Random Number Generator)
+Time:    Sun Jun 18 02:53:31 2023
+Kernel:  AVX
+
+Reading alignment file ./yh3/data.11 ... Phylip format detected
+Alignment most likely contains DNA/RNA sequences
+Alignment has 500 sequences with 1000 columns and 1000 patterns
+ID   Sequence #Gap/Ambiguity
+1    T1    0    (0.000%)	4
+2    T377  0    (0.000%)	4
+3    T464  0    (0.000%)	4
+4    T40   0    (0.000%)	4
+5    T477  0    (0.000%)	4
+6    T65   0    (0.000%)	4
+7    T358  0    (0.000%)	4
+8    T440  0    (0.000%)	4
+9    T321  0    (0.000%)	4
+10   T75   0    (0.000%)	4
+11   T155  0    (0.000%)	4
+12   T404  0    (0.000%)	4
+13   T491  0    (0.000%)	4
+14   T495  0    (0.000%)	4
+15   T196  0    (0.000%)	4
+16   T417  0    (0.000%)	4
+17   T346  0    (0.000%)	4
+18   T401  0    (0.000%)	4
+19   T319  0    (0.000%)	4
+20   T304  0    (0.000%)	4
+21   T344  0    (0.000%)	4
+22   T24   0    (0.000%)	4
+23   T457  0    (0.000%)	4
+24   T166  0    (0.000%)	4
+25   T66   0    (0.000%)	4
+26   T59   0    (0.000%)	4
+27   T141  0    (0.000%)	4
+28   T264  0    (0.000%)	4
+29   T203  0    (0.000%)	4
+30   T442  0    (0.000%)	4
+31   T70   0    (0.000%)	4
+32   T323  0    (0.000%)	4
+33   T356  0    (0.000%)	4
+34   T422  0    (0.000%)	4
+35   T426  0    (0.000%)	4
+36   T254  0    (0.000%)	4
+37   T371  0    (0.000%)	4
+38   T209  0    (0.000%)	4
+39   T406  0    (0.000%)	4
+40   T161  0    (0.000%)	4
+41   T51   0    (0.000%)	4
+42   T91   0    (0.000%)	4
+43   T108  0    (0.000%)	4
+44   T416  0    (0.000%)	4
+45   T210  0    (0.000%)	4
+46   T130  0    (0.000%)	4
+47   T35   0    (0.000%)	4
+48   T463  0    (0.000%)	4
+49   T136  0    (0.000%)	4
+50   T351  0    (0.000%)	4
+51   T169  0    (0.000%)	4
+52   T411  0    (0.000%)	4
+53   T309  0    (0.000%)	4
+54   T367  0    (0.000%)	4
+55   T10   0    (0.000%)	4
+56   T256  0    (0.000%)	4
+57   T79   0    (0.000%)	4
+58   T113  0    (0.000%)	4
+59   T390  0    (0.000%)	4
+60   T289  0    (0.000%)	4
+61   T195  0    (0.000%)	4
+62   T211  0    (0.000%)	4
+63   T39   0    (0.000%)	4
+64   T487  0    (0.000%)	4
+65   T324  0    (0.000%)	4
+66   T437  0    (0.000%)	4
+67   T165  0    (0.000%)	4
+68   T220  0    (0.000%)	4
+69   T30   0    (0.000%)	4
+70   T460  0    (0.000%)	4
+71   T225  0    (0.000%)	4
+72   T158  0    (0.000%)	4
+73   T224  0    (0.000%)	4
+74   T283  0    (0.000%)	4
+75   T300  0    (0.000%)	4
+76   T479  0    (0.000%)	4
+77   T214  0    (0.000%)	4
+78   T244  0    (0.000%)	4
+79   T253  0    (0.000%)	4
+80   T230  0    (0.000%)	4
+81   T247  0    (0.000%)	4
+82   T261  0    (0.000%)	4
+83   T269  0    (0.000%)	4
+84   T248  0    (0.000%)	4
+85   T462  0    (0.000%)	4
+86   T389  0    (0.000%)	4
+87   T255  0    (0.000%)	4
+88   T302  0    (0.000%)	4
+89   T292  0    (0.000%)	4
+90   T83   0    (0.000%)	4
+91   T299  0    (0.000%)	4
+92   T363  0    (0.000%)	4
+93   T414  0    (0.000%)	4
+94   T140  0    (0.000%)	4
+95   T369  0    (0.000%)	4
+96   T276  0    (0.000%)	4
+97   T44   0    (0.000%)	4
+98   T274  0    (0.000%)	4
+99   T250  0    (0.000%)	4
+100  T147  0    (0.000%)	4
+101  T105  0    (0.000%)	4
+102  T273  0    (0.000%)	4
+103  T103  0    (0.000%)	4
+104  T370  0    (0.000%)	4
+105  T145  0    (0.000%)	4
+106  T57   0    (0.000%)	4
+107  T199  0    (0.000%)	4
+108  T334  0    (0.000%)	4
+109  T341  0    (0.000%)	4
+110  T355  0    (0.000%)	4
+111  T46   0    (0.000%)	4
+112  T333  0    (0.000%)	4
+113  T205  0    (0.000%)	4
+114  T49   0    (0.000%)	4
+115  T63   0    (0.000%)	4
+116  T284  0    (0.000%)	4
+117  T407  0    (0.000%)	4
+118  T192  0    (0.000%)	4
+119  T207  0    (0.000%)	4
+120  T15   0    (0.000%)	4
+121  T131  0    (0.000%)	4
+122  T423  0    (0.000%)	4
+123  T267  0    (0.000%)	4
+124  T111  0    (0.000%)	4
+125  T171  0    (0.000%)	4
+126  T262  0    (0.000%)	4
+127  T221  0    (0.000%)	4
+128  T86   0    (0.000%)	4
+129  T480  0    (0.000%)	4
+130  T278  0    (0.000%)	4
+131  T251  0    (0.000%)	4
+132  T142  0    (0.000%)	4
+133  T365  0    (0.000%)	4
+134  T200  0    (0.000%)	4
+135  T330  0    (0.000%)	4
+136  T133  0    (0.000%)	4
+137  T402  0    (0.000%)	4
+138  T212  0    (0.000%)	4
+139  T275  0    (0.000%)	4
+140  T467  0    (0.000%)	4
+141  T353  0    (0.000%)	4
+142  T94   0    (0.000%)	4
+143  T378  0    (0.000%)	4
+144  T127  0    (0.000%)	4
+145  T154  0    (0.000%)	4
+146  T122  0    (0.000%)	4
+147  T375  0    (0.000%)	4
+148  T362  0    (0.000%)	4
+149  T182  0    (0.000%)	4
+150  T486  0    (0.000%)	4
+151  T288  0    (0.000%)	4
+152  T481  0    (0.000%)	4
+153  T118  0    (0.000%)	4
+154  T418  0    (0.000%)	4
+155  T167  0    (0.000%)	4
+156  T151  0    (0.000%)	4
+157  T18   0    (0.000%)	4
+158  T226  0    (0.000%)	4
+159  T298  0    (0.000%)	4
+160  T345  0    (0.000%)	4
+161  T223  0    (0.000%)	4
+162  T303  0    (0.000%)	4
+163  T160  0    (0.000%)	4
+164  T82   0    (0.000%)	4
+165  T322  0    (0.000%)	4
+166  T449  0    (0.000%)	4
+167  T20   0    (0.000%)	4
+168  T468  0    (0.000%)	4
+169  T384  0    (0.000%)	4
+170  T159  0    (0.000%)	4
+171  T97   0    (0.000%)	4
+172  T2    0    (0.000%)	4
+173  T315  0    (0.000%)	4
+174  T216  0    (0.000%)	4
+175  T252  0    (0.000%)	4
+176  T31   0    (0.000%)	4
+177  T349  0    (0.000%)	4
+178  T121  0    (0.000%)	4
+179  T350  0    (0.000%)	4
+180  T81   0    (0.000%)	4
+181  T134  0    (0.000%)	4
+182  T179  0    (0.000%)	4
+183  T72   0    (0.000%)	4
+184  T470  0    (0.000%)	4
+185  T400  0    (0.000%)	4
+186  T453  0    (0.000%)	4
+187  T99   0    (0.000%)	4
+188  T12   0    (0.000%)	4
+189  T281  0    (0.000%)	4
+190  T157  0    (0.000%)	4
+191  T359  0    (0.000%)	4
+192  T3    0    (0.000%)	4
+193  T306  0    (0.000%)	4
+194  T445  0    (0.000%)	4
+195  T74   0    (0.000%)	4
+196  T123  0    (0.000%)	4
+197  T119  0    (0.000%)	4
+198  T387  0    (0.000%)	4
+199  T92   0    (0.000%)	4
+200  T69   0    (0.000%)	4
+201  T386  0    (0.000%)	4
+202  T178  0    (0.000%)	4
+203  T326  0    (0.000%)	4
+204  T146  0    (0.000%)	4
+205  T285  0    (0.000%)	4
+206  T471  0    (0.000%)	4
+207  T263  0    (0.000%)	4
+208  T317  0    (0.000%)	4
+209  T270  0    (0.000%)	4
+210  T488  0    (0.000%)	4
+211  T106  0    (0.000%)	4
+212  T208  0    (0.000%)	4
+213  T430  0    (0.000%)	4
+214  T420  0    (0.000%)	4
+215  T139  0    (0.000%)	4
+216  T258  0    (0.000%)	4
+217  T25   0    (0.000%)	4
+218  T494  0    (0.000%)	4
+219  T368  0    (0.000%)	4
+220  T347  0    (0.000%)	4
+221  T395  0    (0.000%)	4
+222  T114  0    (0.000%)	4
+223  T232  0    (0.000%)	4
+224  T443  0    (0.000%)	4
+225  T176  0    (0.000%)	4
+226  T23   0    (0.000%)	4
+227  T88   0    (0.000%)	4
+228  T73   0    (0.000%)	4
+229  T311  0    (0.000%)	4
+230  T361  0    (0.000%)	4
+231  T48   0    (0.000%)	4
+232  T243  0    (0.000%)	4
+233  T469  0    (0.000%)	4
+234  T236  0    (0.000%)	4
+235  T410  0    (0.000%)	4
+236  T64   0    (0.000%)	4
+237  T156  0    (0.000%)	4
+238  T343  0    (0.000%)	4
+239  T58   0    (0.000%)	4
+240  T293  0    (0.000%)	4
+241  T485  0    (0.000%)	4
+242  T348  0    (0.000%)	4
+243  T372  0    (0.000%)	4
+244  T342  0    (0.000%)	4
+245  T89   0    (0.000%)	4
+246  T231  0    (0.000%)	4
+247  T53   0    (0.000%)	4
+248  T403  0    (0.000%)	4
+249  T5    0    (0.000%)	4
+250  T280  0    (0.000%)	4
+251  T444  0    (0.000%)	4
+252  T42   0    (0.000%)	4
+253  T222  0    (0.000%)	4
+254  T461  0    (0.000%)	4
+255  T327  0    (0.000%)	4
+256  T17   0    (0.000%)	4
+257  T67   0    (0.000%)	4
+258  T421  0    (0.000%)	4
+259  T104  0    (0.000%)	4
+260  T291  0    (0.000%)	4
+261  T190  0    (0.000%)	4
+262  T56   0    (0.000%)	4
+263  T237  0    (0.000%)	4
+264  T29   0    (0.000%)	4
+265  T22   0    (0.000%)	4
+266  T260  0    (0.000%)	4
+267  T36   0    (0.000%)	4
+268  T332  0    (0.000%)	4
+269  T125  0    (0.000%)	4
+270  T90   0    (0.000%)	4
+271  T6    0    (0.000%)	4
+272  T229  0    (0.000%)	4
+273  T364  0    (0.000%)	4
+274  T490  0    (0.000%)	4
+275  T240  0    (0.000%)	4
+276  T379  0    (0.000%)	4
+277  T109  0    (0.000%)	4
+278  T439  0    (0.000%)	4
+279  T116  0    (0.000%)	4
+280  T62   0    (0.000%)	4
+281  T137  0    (0.000%)	4
+282  T483  0    (0.000%)	4
+283  T335  0    (0.000%)	4
+284  T124  0    (0.000%)	4
+285  T308  0    (0.000%)	4
+286  T314  0    (0.000%)	4
+287  T320  0    (0.000%)	4
+288  T266  0    (0.000%)	4
+289  T193  0    (0.000%)	4
+290  T476  0    (0.000%)	4
+291  T277  0    (0.000%)	4
+292  T110  0    (0.000%)	4
+293  T191  0    (0.000%)	4
+294  T78   0    (0.000%)	4
+295  T374  0    (0.000%)	4
+296  T268  0    (0.000%)	4
+297  T184  0    (0.000%)	4
+298  T249  0    (0.000%)	4
+299  T354  0    (0.000%)	4
+300  T473  0    (0.000%)	4
+301  T360  0    (0.000%)	4
+302  T143  0    (0.000%)	4
+303  T316  0    (0.000%)	4
+304  T177  0    (0.000%)	4
+305  T115  0    (0.000%)	4
+306  T339  0    (0.000%)	4
+307  T61   0    (0.000%)	4
+308  T77   0    (0.000%)	4
+309  T336  0    (0.000%)	4
+310  T492  0    (0.000%)	4
+311  T246  0    (0.000%)	4
+312  T475  0    (0.000%)	4
+313  T153  0    (0.000%)	4
+314  T126  0    (0.000%)	4
+315  T447  0    (0.000%)	4
+316  T87   0    (0.000%)	4
+317  T14   0    (0.000%)	4
+318  T296  0    (0.000%)	4
+319  T272  0    (0.000%)	4
+320  T98   0    (0.000%)	4
+321  T198  0    (0.000%)	4
+322  T219  0    (0.000%)	4
+323  T499  0    (0.000%)	4
+324  T234  0    (0.000%)	4
+325  T409  0    (0.000%)	4
+326  T8    0    (0.000%)	4
+327  T76   0    (0.000%)	4
+328  T52   0    (0.000%)	4
+329  T47   0    (0.000%)	4
+330  T11   0    (0.000%)	4
+331  T38   0    (0.000%)	4
+332  T117  0    (0.000%)	4
+333  T383  0    (0.000%)	4
+334  T497  0    (0.000%)	4
+335  T484  0    (0.000%)	4
+336  T451  0    (0.000%)	4
+337  T397  0    (0.000%)	4
+338  T189  0    (0.000%)	4
+339  T297  0    (0.000%)	4
+340  T474  0    (0.000%)	4
+341  T194  0    (0.000%)	4
+342  T27   0    (0.000%)	4
+343  T54   0    (0.000%)	4
+344  T148  0    (0.000%)	4
+345  T201  0    (0.000%)	4
+346  T170  0    (0.000%)	4
+347  T217  0    (0.000%)	4
+348  T465  0    (0.000%)	4
+349  T446  0    (0.000%)	4
+350  T399  0    (0.000%)	4
+351  T241  0    (0.000%)	4
+352  T202  0    (0.000%)	4
+353  T310  0    (0.000%)	4
+354  T233  0    (0.000%)	4
+355  T427  0    (0.000%)	4
+356  T150  0    (0.000%)	4
+357  T493  0    (0.000%)	4
+358  T381  0    (0.000%)	4
+359  T34   0    (0.000%)	4
+360  T9    0    (0.000%)	4
+361  T393  0    (0.000%)	4
+362  T313  0    (0.000%)	4
+363  T489  0    (0.000%)	4
+364  T318  0    (0.000%)	4
+365  T290  0    (0.000%)	4
+366  T181  0    (0.000%)	4
+367  T340  0    (0.000%)	4
+368  T415  0    (0.000%)	4
+369  T19   0    (0.000%)	4
+370  T101  0    (0.000%)	4
+371  T392  0    (0.000%)	4
+372  T183  0    (0.000%)	4
+373  T398  0    (0.000%)	4
+374  T328  0    (0.000%)	4
+375  T71   0    (0.000%)	4
+376  T149  0    (0.000%)	4
+377  T459  0    (0.000%)	4
+378  T286  0    (0.000%)	4
+379  T498  0    (0.000%)	4
+380  T307  0    (0.000%)	4
+381  T185  0    (0.000%)	4
+382  T466  0    (0.000%)	4
+383  T84   0    (0.000%)	4
+384  T60   0    (0.000%)	4
+385  T385  0    (0.000%)	4
+386  T431  0    (0.000%)	4
+387  T107  0    (0.000%)	4
+388  T428  0    (0.000%)	4
+389  T373  0    (0.000%)	4
+390  T186  0    (0.000%)	4
+391  T325  0    (0.000%)	4
+392  T238  0    (0.000%)	4
+393  T173  0    (0.000%)	4
+394  T239  0    (0.000%)	4
+395  T441  0    (0.000%)	4
+396  T7    0    (0.000%)	4
+397  T33   0    (0.000%)	4
+398  T188  0    (0.000%)	4
+399  T206  0    (0.000%)	4
+400  T448  0    (0.000%)	4
+401  T305  0    (0.000%)	4
+402  T218  0    (0.000%)	4
+403  T204  0    (0.000%)	4
+404  T450  0    (0.000%)	4
+405  T472  0    (0.000%)	4
+406  T55   0    (0.000%)	4
+407  T412  0    (0.000%)	4
+408  T144  0    (0.000%)	4
+409  T396  0    (0.000%)	4
+410  T85   0    (0.000%)	4
+411  T129  0    (0.000%)	4
+412  T352  0    (0.000%)	4
+413  T93   0    (0.000%)	4
+414  T26   0    (0.000%)	4
+415  T279  0    (0.000%)	4
+416  T337  0    (0.000%)	4
+417  T388  0    (0.000%)	4
+418  T408  0    (0.000%)	4
+419  T413  0    (0.000%)	4
+420  T376  0    (0.000%)	4
+421  T424  0    (0.000%)	4
+422  T287  0    (0.000%)	4
+423  T452  0    (0.000%)	4
+424  T180  0    (0.000%)	4
+425  T21   0    (0.000%)	4
+426  T132  0    (0.000%)	4
+427  T312  0    (0.000%)	4
+428  T338  0    (0.000%)	4
+429  T482  0    (0.000%)	4
+430  T432  0    (0.000%)	4
+431  T245  0    (0.000%)	4
+432  T257  0    (0.000%)	4
+433  T391  0    (0.000%)	4
+434  T163  0    (0.000%)	4
+435  T28   0    (0.000%)	4
+436  T16   0    (0.000%)	4
+437  T112  0    (0.000%)	4
+438  T68   0    (0.000%)	4
+439  T172  0    (0.000%)	4
+440  T436  0    (0.000%)	4
+441  T429  0    (0.000%)	4
+442  T357  0    (0.000%)	4
+443  T329  0    (0.000%)	4
+444  T164  0    (0.000%)	4
+445  T295  0    (0.000%)	4
+446  T282  0    (0.000%)	4
+447  T458  0    (0.000%)	4
+448  T100  0    (0.000%)	4
+449  T434  0    (0.000%)	4
+450  T425  0    (0.000%)	4
+451  T382  0    (0.000%)	4
+452  T438  0    (0.000%)	4
+453  T265  0    (0.000%)	4
+454  T41   0    (0.000%)	4
+455  T175  0    (0.000%)	4
+456  T366  0    (0.000%)	4
+457  T242  0    (0.000%)	4
+458  T128  0    (0.000%)	4
+459  T162  0    (0.000%)	4
+460  T138  0    (0.000%)	4
+461  T294  0    (0.000%)	4
+462  T455  0    (0.000%)	4
+463  T102  0    (0.000%)	4
+464  T228  0    (0.000%)	4
+465  T271  0    (0.000%)	4
+466  T213  0    (0.000%)	4
+467  T419  0    (0.000%)	4
+468  T96   0    (0.000%)	4
+469  T478  0    (0.000%)	4
+470  T405  0    (0.000%)	4
+471  T496  0    (0.000%)	4
+472  T197  0    (0.000%)	4
+473  T259  0    (0.000%)	4
+474  T135  0    (0.000%)	4
+475  T433  0    (0.000%)	4
+476  T215  0    (0.000%)	4
+477  T168  0    (0.000%)	4
+478  T235  0    (0.000%)	4
+479  T50   0    (0.000%)	4
+480  T13   0    (0.000%)	4
+481  T331  0    (0.000%)	4
+482  T435  0    (0.000%)	4
+483  T120  0    (0.000%)	4
+484  T174  0    (0.000%)	4
+485  T37   0    (0.000%)	4
+486  T380  0    (0.000%)	4
+487  T394  0    (0.000%)	4
+488  T32   0    (0.000%)	4
+489  T45   0    (0.000%)	4
+490  T4    0    (0.000%)	4
+491  T454  0    (0.000%)	4
+492  T80   0    (0.000%)	4
+493  T187  0    (0.000%)	4
+494  T152  0    (0.000%)	4
+495  T0    0    (0.000%)	4
+496  T43   0    (0.000%)	4
+497  T95   0    (0.000%)	4
+498  T456  0    (0.000%)	4
+499  T227  0    (0.000%)	4
+500  T301  0    (0.000%)	4
+**** TOTAL 0 (0.000%)
+
+Computing random stepwise addition parsimony tree for evaluating patterns...
+Time for random stepwise addition parsimony tree construction: 0.144 seconds
+Parsimony score: 81034
+Reordering patterns in alignment by decreasing order of pattern parsimony... 0.005 seconds
+
+Computing random stepwise addition parsimony tree for evaluating patterns...
+Time for random stepwise addition parsimony tree construction: 0.085 seconds
+Parsimony score: 81034
+Reordering patterns in alignment by decreasing order of pattern parsimony... 0.006 seconds
+
+Create initial parsimony tree by phylogenetic likelihood library (PLL)... 0.094 seconds
+Generating 1000 samples for bootstrap approximation...
+
+NOTE: 88.095 MB RAM is required!
+Current best tree score: 81028
+
+Generating 99 parsimony trees... (70 duplicated parsimony trees)
+CPU time: 11
+Finish initializing candidate tree set. Number of distinct locally optimal trees: 30
+Current best score: 81028 / CPU time: 11
+
+Time: 0h:0m:11s
+NOTE: REPS computation is segmented into 18 parts for speed...
+segment#1 ends at 48
+segment#2 ends at 96
+segment#3 ends at 144
+segment#4 ends at 192
+segment#5 ends at 240
+segment#6 ends at 288
+segment#7 ends at 352
+segment#8 ends at 416
+segment#9 ends at 480
+segment#10 ends at 544
+segment#11 ends at 608
+segment#12 ends at 672
+segment#13 ends at 736
+segment#14 ends at 800
+segment#15 ends at 864
+segment#16 ends at 928
+segment#17 ends at 992
+segment#18 ends at 1000
+0 seconds.
+RATCHET Iteration 10 / Score: 81028 / Time: 0h:0m:47s
+RATCHET Iteration 20 / Score: 81028 / Time: 0h:1m:0s (0h:25m:16s left)
+RATCHET Iteration 30 / Score: 81028 / Time: 0h:1m:11s (0h:19m:26s left)
+RATCHET Iteration 40 / Score: 81029 / Time: 0h:1m:22s (0h:16m:14s left)
+RATCHET Iteration 50 / Score: 81028 / Time: 0h:1m:35s (0h:14m:38s left)
+RATCHET Iteration 60 / Score: 81028 / Time: 0h:1m:46s (0h:13m:13s left)
+RATCHET Iteration 70 / Score: 81028 / Time: 0h:1m:58s (0h:12m:20s left)
+RATCHET Iteration 80 / Score: 81028 / Time: 0h:2m:10s (0h:11m:35s left)
+RATCHET Iteration 90 / Score: 81028 / Time: 0h:2m:21s (0h:10m:54s left)
+RATCHET Iteration 100 / Score: 81028 / Time: 0h:2m:33s (0h:10m:21s left)
+RATCHET Iteration 110 / Score: 81028 / Time: 0h:2m:45s (0h:9m:53s left)
+RATCHET Iteration 120 / Score: 81028 / Time: 0h:2m:55s (0h:9m:22s left)
+RATCHET Iteration 130 / Score: 81028 / Time: 0h:3m:9s (0h:9m:3s left)
+RATCHET Iteration 140 / Score: 81029 / Time: 0h:3m:21s (0h:8m:42s left)
+RATCHET Iteration 150 / Score: 81028 / Time: 0h:3m:34s (0h:8m:24s left)
+RATCHET Iteration 160 / Score: 81028 / Time: 0h:3m:45s (0h:8m:2s left)
+RATCHET Iteration 170 / Score: 81028 / Time: 0h:3m:56s (0h:7m:43s left)
+RATCHET Iteration 180 / Score: 81028 / Time: 0h:4m:8s (0h:7m:24s left)
+RATCHET Iteration 190 / Score: 81028 / Time: 0h:4m:17s (0h:7m:4s left)
+RATCHET Iteration 200 / Score: 81028 / Time: 0h:4m:27s (0h:6m:43s left)
+RATCHET Iteration 210 / Score: 81028 / Time: 0h:4m:39s (0h:6m:28s left)
+RATCHET Iteration 220 / Score: 81028 / Time: 0h:4m:50s (0h:6m:13s left)
+RATCHET Iteration 230 / Score: 81028 / Time: 0h:5m:0s (0h:5m:55s left)
+RATCHET Iteration 240 / Score: 81028 / Time: 0h:5m:11s (0h:5m:40s left)
+RATCHET Iteration 250 / Score: 81028 / Time: 0h:5m:21s (0h:5m:24s left)
+RATCHET Iteration 260 / Score: 81029 / Time: 0h:5m:33s (0h:5m:9s left)
+RATCHET Iteration 270 / Score: 81028 / Time: 0h:5m:43s (0h:4m:54s left)
+RATCHET Iteration 280 / Score: 81028 / Time: 0h:5m:53s (0h:4m:40s left)
+RATCHET Iteration 290 / Score: 81028 / Time: 0h:6m:4s (0h:4m:25s left)
+RATCHET Iteration 300 / Score: 81028 / Time: 0h:6m:15s (0h:4m:12s left)
+RATCHET Iteration 310 / Score: 81028 / Time: 0h:6m:27s (0h:3m:59s left)
+RATCHET Iteration 320 / Score: 81028 / Time: 0h:6m:36s (0h:3m:45s left)
+RATCHET Iteration 330 / Score: 81028 / Time: 0h:6m:48s (0h:3m:32s left)
+RATCHET Iteration 340 / Score: 81028 / Time: 0h:7m:0s (0h:3m:19s left)
+RATCHET Iteration 350 / Score: 81028 / Time: 0h:7m:12s (0h:3m:6s left)
+RATCHET Iteration 360 / Score: 81028 / Time: 0h:7m:22s (0h:2m:53s left)
+RATCHET Iteration 370 / Score: 81028 / Time: 0h:7m:34s (0h:2m:41s left)
+RATCHET Iteration 380 / Score: 81028 / Time: 0h:7m:45s (0h:2m:28s left)
+RATCHET Iteration 390 / Score: 81028 / Time: 0h:7m:56s (0h:2m:15s left)
+RATCHET Iteration 400 / Score: 81028 / Time: 0h:8m:7s (0h:2m:3s left)
+RATCHET Iteration 410 / Score: 81028 / Time: 0h:8m:18s (0h:1m:50s left)
+RATCHET Iteration 420 / Score: 81028 / Time: 0h:8m:29s (0h:1m:38s left)
+RATCHET Iteration 430 / Score: 81028 / Time: 0h:8m:40s (0h:1m:26s left)
+RATCHET Iteration 440 / Score: 81028 / Time: 0h:8m:53s (0h:1m:14s left)
+RATCHET Iteration 450 / Score: 81028 / Time: 0h:9m:6s (0h:1m:2s left)
+RATCHET Iteration 460 / Score: 81028 / Time: 0h:9m:18s (0h:0m:49s left)
+RATCHET Iteration 470 / Score: 81028 / Time: 0h:9m:32s (0h:0m:37s left)
+RATCHET Iteration 480 / Score: 81028 / Time: 0h:9m:44s (0h:0m:25s left)
+RATCHET Iteration 490 / Score: 81028 / Time: 0h:9m:55s (0h:0m:13s left)
+RATCHET Iteration 500 / Score: 81028 / Time: 0h:10m:6s (0h:0m:1s left)
+Optimizing bootstrap trees ...
+100 replicates done
+200 replicates done
+300 replicates done
+400 replicates done
+500 replicates done
+600 replicates done
+700 replicates done
+800 replicates done
+900 replicates done
+1000 replicates done
+CPU Time used:  98 sec.
+NOTE: At the end, 106148 bootstrap candidate trees evaluated.
+Scores of best 5 trees: 
+81028 81028 81028 81028 81028 
+BEST SCORE FOUND : 81028
+Creating bootstrap support values...
+Split supports printed to NEXUS file ./yh3/data.11.orig.boot.splits.nex
+
+CPU time used for tree search: 703.209 sec (0h:11m:43s)
+Wall-clock time used for tree search: 705.065 sec (0h:11m:45s)
+Total CPU time used: 704.925 sec (0h:11m:44s)
+Total wall-clock time used: 706.918 sec (0h:11m:46s)
+
+Computing bootstrap consensus tree...
+Reading input file ./yh3/data.11.orig.boot.splits.nex...
+500 taxa and 1270 splits.
+Consensus tree written to ./yh3/data.11.orig.boot.contree
+Parsimony score of consensus tree: 81030
+
+Analysis results written to: 
+  MPBoot report:                 ./yh3/data.11.orig.boot.mpboot
+  Maximum-parsimony  tree:       ./yh3/data.11.orig.boot.treefile
+
+Maximum parsimony bootstrap approximation results written to:
+  Split support values:          ./yh3/data.11.orig.boot.splits.nex
+  Consensus tree:                ./yh3/data.11.orig.boot.contree
+  Screen log file:               ./yh3/data.11.orig.boot.log
+
+Date and Time: Sun Jun 18 03:05:19 2023
