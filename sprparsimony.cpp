@@ -2003,15 +2003,12 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
         
         tr->cnt2++;
         if (tr->usingSA) {
-            if (checkAcceptTree(tr, pr, perSiteScores, haveChange, mp, bestTreeScoreHits)) {
+            checkAcceptTree(tr, pr, perSiteScores, haveChange, mp, bestTreeScoreHits);
+
+            if (haveChange) {
                 tr->insertNode = q;
                 tr->removeNode = p;
             }
-
-            // if (haveChange) {
-            //     tr->insertNode = q;
-            //     tr->removeNode = p;
-            // }
         } else {
             if (tr->normalIter > 0 && tr->normalIter <=10) ++tr->maxNumTree;
             if (mp > tr->bestParsimony) {
@@ -2068,9 +2065,9 @@ static void addTraverseParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
         testInsertParsimony(tr, pr, p, q, saveBranches, perSiteScores);
 
     if (((q->number > tr->mxtips)) && ((--maxtrav > 0) || doAll)) {
-        if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, q->next->back, mintrav, maxtrav, doAll,
+        if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, q->next->back, mintrav, maxtrav, doAll,
                              saveBranches, perSiteScores);
-        if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, q->next->next->back, mintrav, maxtrav,
+        if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, q->next->next->back, mintrav, maxtrav,
                              doAll, saveBranches, perSiteScores);
     }
 }
@@ -2156,16 +2153,16 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             removeNodeParsimony(p);
 
             if ((p1->number > tr->mxtips)) {
-                if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, p1->next->back, mintrav,
+                if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, p1->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, p1->next->next->back, mintrav,
+                if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, p1->next->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
             if ((p2->number > tr->mxtips)) {
-                if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, p2->next->back, mintrav,
+                if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, p2->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, p2->next->next->back, mintrav,
+                if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, p, p2->next->next->back, mintrav,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
@@ -2193,16 +2190,16 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             mintrav2 = mintrav > 2 ? mintrav : 2;
 
             if ((q1->number > tr->mxtips)) {
-                if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, q, q1->next->back, mintrav2,
+                if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, q, q1->next->back, mintrav2,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, q, q1->next->next->back, mintrav2,
+                if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, q, q1->next->next->back, mintrav2,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
             if ((q2->number > tr->mxtips)) {
-                if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, q, q2->next->back, mintrav2,
+                if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, q, q2->next->back, mintrav2,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
-                if ((!tr->usingSA) || ((tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, q, q2->next->next->back, mintrav2,
+                if ((!tr->usingSA) || (!haveChange && (tr->coolingTimes < tr->maxCoolingTimes))) addTraverseParsimony(tr, pr, q, q2->next->next->back, mintrav2,
                                      maxtrav, doAll, PLL_FALSE, perSiteScores);
             }
 
@@ -3109,7 +3106,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                         PLL_FALSE, perSiteScores);
         
         if (tr->usingSA) {
-            if (tr->insertNode != NULL && tr->removeNode != NULL) {
+            if (haveChange) {
                 haveChange = false;
                 restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
                 randomMP = tr->bestParsimony;

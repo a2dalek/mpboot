@@ -79,9 +79,7 @@ void checkDecreaseTemp(pllInstance *tr) {
     }
 }
 
-bool checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool& haveChange, unsigned int mp, unsigned long& bestTreeScoreHits) {
-    bool ok = false;
-    
+void checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool& haveChange, unsigned int mp, unsigned long& bestTreeScoreHits) {
     if (mp < tr->bestParsimony) {
         pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
             tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
@@ -96,13 +94,11 @@ bool checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool
     if (mp < tr->currentParsimony) {
         tr->currentParsimony = mp;
         bestTreeScoreHits = 1;
-        ok=true;
         haveChange = true;
     } else if (mp == tr->currentParsimony) {
         bestTreeScoreHits++;
         if (random_double() < 1.0 / bestTreeScoreHits) {
             haveChange = true;
-            ok=true;
         }
     } else {
         int delta = tr->bestParsimony - mp;
@@ -110,11 +106,9 @@ bool checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool
         double probability = exp(tmp);
         if (random_double() <= probability) {
             haveChange = true;
-            ok=true;
         } 
     }
 
     tr->stepCount++; 
     checkDecreaseTemp(tr);   
-    return ok;
 }
