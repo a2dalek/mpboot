@@ -53,15 +53,16 @@ void pllOptimizeParsimony(pllInstance *tr, partitionList *pr, int mintrav,
 
     method = _method;
 
+    tr->normalIter++;
     InitPllOptimizeParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
-    if (tr->plusSA) {
+    if (tr->plusSA && tr->normalIter > 10) {
         doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
         InitSA(tr, pr, bestIterationScoreHits, maxtrav, (method == OptimizeMethod::TBR));
         doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
 
         // pllCheckIterImprove(tr);
         applyBestTree(tr);
-    } else if (tr->pureSA) {
+    } else if (tr->pureSA && tr->normalIter > 10) {
         InitSA(tr, pr, bestIterationScoreHits, maxtrav, (method == OptimizeMethod::TBR));
         doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
 

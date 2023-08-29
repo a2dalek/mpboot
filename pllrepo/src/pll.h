@@ -1317,6 +1317,9 @@ typedef struct {
     char *tree1;
     int treeStringLength;
 
+    unsigned int maxNumTree;
+    unsigned int normalIter;
+
     unsigned int bestParsimony;
     unsigned int *parsimonyScore;
 

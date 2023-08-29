@@ -31,13 +31,16 @@ void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScore
     tr->coolingTimes = 0;
     tr->temperature = tr->startTemp;
     tr->stepCount = 0;
-    tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
+    // tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
+    tr->limitTrees = tr->maxNumTree / 10 / tr->maxCoolingTimes + ((tr->maxNumTree / 10 % tr->maxCoolingTimes) > 0);
+    // printf("aaaa %d\n", (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes);
+    // printf("bbbb %d\n",tr->maxNumTree / 10 / tr->maxCoolingTimes);
 
     if (usingTBR) tr->limitTrees *= maxtrav-1;
 }
 
 bool checkContinueSA(pllInstance *tr) {
-    return tr->coolingTimes <= tr->maxCoolingTimes;
+    return tr->coolingTimes < tr->maxCoolingTimes;
 }
 
 void applyBestTree(pllInstance *tr) {
@@ -81,12 +84,13 @@ void checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool
         pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
             tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
             PLL_SUMMARIZE_LH, 0, 0);
+        tr->sumOfDelta += (tr->bestParsimony - mp) * tr->numOfDelta;
         tr->bestParsimony = mp;
         bestTreeScoreHits = 1;
         haveChange = true;
     } else if (mp == tr->bestParsimony) {
         bestTreeScoreHits++;
-        if (random_double() < (double)1/bestTreeScoreHits) {
+        if (random_double() < 1.0 / bestTreeScoreHits) {
             pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
                 tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
                 PLL_SUMMARIZE_LH, 0, 0);
@@ -102,7 +106,7 @@ void checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool
         double probability = exp(tmp);
         if (random_double() <= probability) {
             haveChange = true;
-            tr->cnt1++;
+            // tr->cnt1++;
         } 
     }
 
