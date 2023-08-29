@@ -52,7 +52,7 @@ void pllOptimizeParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     unsigned int randomMP, startMP, bestIterationScoreHits;
 
     method = _method;
-
+    tr->cnt2 = 0;
     tr->normalIter++;
     InitPllOptimizeParsimony(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
     if (tr->plusSA && tr->normalIter > 10) {
@@ -72,4 +72,5 @@ void pllOptimizeParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     } else {
         doHillClimbing(tr, pr, mintrav, maxtrav, _iqtree, perSiteScores, randomMP, startMP, bestIterationScoreHits);
     }
+    // printf("%d\n", tr->cnt2);
 }

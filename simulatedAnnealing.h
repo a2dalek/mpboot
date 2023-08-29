@@ -12,6 +12,6 @@ bool checkContinueSA(pllInstance *tr);
 
 void applyBestTree(pllInstance *tr);
 
-void checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool& haveChange, unsigned int mp, unsigned long& bestTreeScoreHits);
+bool checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool& haveChange, unsigned int mp, unsigned long& bestTreeScoreHits);
 
 #endif

@@ -34,7 +34,7 @@ void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScore
     // tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
     tr->limitTrees = tr->maxNumTree / 10 / tr->maxCoolingTimes + ((tr->maxNumTree / 10 % tr->maxCoolingTimes) > 0);
     // printf("aaaa %d\n", (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes);
-    // printf("bbbb %d\n",tr->maxNumTree / 10 / tr->maxCoolingTimes);
+    // printf("bbbb %d\n", tr->limitTrees);
 
     if (usingTBR) tr->limitTrees *= maxtrav-1;
 }
@@ -79,37 +79,42 @@ void checkDecreaseTemp(pllInstance *tr) {
     }
 }
 
-void checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool& haveChange, unsigned int mp, unsigned long& bestTreeScoreHits) {
+bool checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool& haveChange, unsigned int mp, unsigned long& bestTreeScoreHits) {
+    bool ok = false;
+    
     if (mp < tr->bestParsimony) {
         pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
             tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
             PLL_SUMMARIZE_LH, 0, 0);
         tr->sumOfDelta += (tr->bestParsimony - mp) * tr->numOfDelta;
         tr->bestParsimony = mp;
+    } else {
+        tr->sumOfDelta += mp - tr->bestParsimony;
+        tr->numOfDelta++;
+    }
+
+    if (mp < tr->currentParsimony) {
+        tr->currentParsimony = mp;
         bestTreeScoreHits = 1;
+        ok=true;
         haveChange = true;
-    } else if (mp == tr->bestParsimony) {
+    } else if (mp == tr->currentParsimony) {
         bestTreeScoreHits++;
         if (random_double() < 1.0 / bestTreeScoreHits) {
-            pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
-                tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
-                PLL_SUMMARIZE_LH, 0, 0);
             haveChange = true;
+            ok=true;
         }
-    } else if (tr->temperature >= tr->finalTemp) {
-        int tmpBestParsimony = tr->bestParsimony;
-        int tmpMP = mp;
-        int delta = tmpBestParsimony - tmpMP;
-        double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
-        tr->sumOfDelta += abs(delta);
-        tr->numOfDelta++;
+    } else {
+        int delta = tr->bestParsimony - mp;
+        double tmp = double(delta)/double(double(tr->sumOfDelta) / tr->numOfDelta * tr->temperature);
         double probability = exp(tmp);
         if (random_double() <= probability) {
             haveChange = true;
-            // tr->cnt1++;
+            ok=true;
         } 
     }
 
     tr->stepCount++; 
     checkDecreaseTemp(tr);   
+    return ok;
 }
