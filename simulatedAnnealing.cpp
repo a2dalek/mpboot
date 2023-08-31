@@ -2,6 +2,7 @@
 
 void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScoreHits, int maxtrav, bool usingTBR) {
     tr->usingSA = true;
+    tr->currentScore = tr->bestParsimony;
     pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
                 tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
                 PLL_SUMMARIZE_LH, 0, 0);
@@ -31,10 +32,7 @@ void InitSA(pllInstance *tr, partitionList *pr, unsigned int &bestIterationScore
     tr->coolingTimes = 0;
     tr->temperature = tr->startTemp;
     tr->stepCount = 0;
-    // tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
     tr->limitTrees = tr->maxNumTree / 10 / tr->maxCoolingTimes + ((tr->maxNumTree / 10 % tr->maxCoolingTimes) > 0);
-    // printf("aaaa %d\n", (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes);
-    // printf("bbbb %d\n", tr->limitTrees);
 
     if (usingTBR) tr->limitTrees *= maxtrav-1;
 }
@@ -82,37 +80,43 @@ void checkDecreaseTemp(pllInstance *tr) {
 bool checkAcceptTree(pllInstance *tr, partitionList *pr, int perSiteScores, bool& haveChange, unsigned int mp, unsigned long& bestTreeScoreHits) {
     bool ok = false;
     
-    if (mp < tr->bestParsimony) {
-        pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
-            tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
-            PLL_SUMMARIZE_LH, 0, 0);
-        tr->sumOfDelta += (tr->bestParsimony - mp) * tr->numOfDelta;
-        tr->bestParsimony = mp;
-    } else {
+    // if (mp < tr->bestParsimony) {
+    //     pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
+    //         tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+    //         PLL_SUMMARIZE_LH, 0, 0);
+    //     tr->sumOfDelta += (tr->bestParsimony - mp) * tr->numOfDelta;
+    //     tr->bestParsimony = mp;
+    // } else {
+    //     tr->sumOfDelta += mp - tr->bestParsimony;
+    //     tr->numOfDelta++;
+    // }
+
+    if (mp > tr->bestParsimony) {
         tr->sumOfDelta += mp - tr->bestParsimony;
         tr->numOfDelta++;
     }
-
-    if (mp < tr->currentParsimony) {
-        tr->currentParsimony = mp;
+    
+    if (mp < tr->bestScoreThisIter) {
+        tr->bestScoreThisIter = mp;
         bestTreeScoreHits = 1;
         ok=true;
         haveChange = true;
-    } else if (mp == tr->currentParsimony) {
+    } else if (mp == tr->bestScoreThisIter) {
         bestTreeScoreHits++;
         if (random_double() < 1.0 / bestTreeScoreHits) {
             haveChange = true;
             ok=true;
         }
-    } else {
-        int delta = tr->bestParsimony - mp;
-        double tmp = double(delta)/double(double(tr->sumOfDelta) / tr->numOfDelta * tr->temperature);
-        double probability = exp(tmp);
-        if (random_double() <= probability) {
-            haveChange = true;
-            ok=true;
-        } 
-    }
+    } 
+    // else {
+    //     int delta = tr->bestParsimony - mp;
+    //     double tmp = double(delta)/double(double(tr->sumOfDelta) / tr->numOfDelta * tr->temperature);
+    //     double probability = exp(tmp);
+    //     if (random_double() <= probability) {
+    //         haveChange = true;
+    //         ok=true;
+    //     } 
+    // }
 
     tr->stepCount++; 
     checkDecreaseTemp(tr);   

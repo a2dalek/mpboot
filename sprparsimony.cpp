@@ -2001,7 +2001,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
         }
         
-        tr->cnt2++;
+        // tr->cnt2++;
         if (tr->usingSA) {
             if (checkAcceptTree(tr, pr, perSiteScores, haveChange, mp, bestTreeScoreHits)) {
                 tr->insertNode = q;
@@ -3070,7 +3070,6 @@ void InitPllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav
     tr->bestParsimony =
         _evaluateParsimony(tr, pr, tr->start, PLL_TRUE, perSiteScores);
 
-    tr->currentParsimony = tr->bestParsimony;
     // cout << "STARTING SCORE: " << tr->bestParsimony << '\n';
     assert(-iqtree->curScore == tr->bestParsimony);
 
@@ -3095,12 +3094,17 @@ void InitPllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav
 int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                   int maxtrav, IQTree *_iqtree, int &perSiteScores, unsigned int &randomMP,
                   unsigned int &startMP, unsigned int &bestIterationScoreHits) {
-    int i, j;
+    int j;
 
     startMP = randomMP;
     nodeRectifierPars(tr);
-    for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
-        if (tr->usingSA) haveChange = false; 
+    for (int i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
+        if (tr->usingSA) {
+            if (tr->coolingTimes >= tr->maxCoolingTimes) break;
+            haveChange = false;
+            tr->bestScoreThisIter = INT_MAX;
+        }
+
         tr->insertNode = NULL;
         tr->removeNode = NULL;
         bestTreeScoreHits = 1;
@@ -3109,10 +3113,33 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                         PLL_FALSE, perSiteScores);
         
         if (tr->usingSA) {
-            if (tr->insertNode != NULL && tr->removeNode != NULL) {
-                haveChange = false;
-                restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
-                randomMP = tr->bestParsimony;
+            if (tr->insertNode != NULL && tr->removeNode != NULL) {       
+                if (tr->bestScoreThisIter < tr->currentScore) {
+                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
+                    bestIterationScoreHits = 1;
+
+                    if (tr->bestScoreThisIter < tr->bestParsimony) {
+                        tr->sumOfDelta += (tr->bestParsimony - tr->bestScoreThisIter) * tr->numOfDelta;
+                        tr->bestParsimony = tr->bestScoreThisIter;
+                        pllTreeToNewick(tr->best_tree_string_sa, tr, pr,
+                                    tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                                    PLL_SUMMARIZE_LH, 0, 0);
+                    }
+                } else if (tr->bestScoreThisIter == tr->currentScore) {
+                    bestIterationScoreHits++;
+                    if (random_double() <= 1.0 / bestIterationScoreHits) {
+                        restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
+                    }
+                } else if (tr->bestScoreThisIter > tr->currentScore) {
+                    tr->currentScore = tr->bestScoreThisIter;
+                    int delta = tr->currentScore - tr->bestScoreThisIter;
+                    double tmp = double(delta)/double(double(tr->sumOfDelta) / tr->numOfDelta * tr->temperature);
+                    double probability = exp(tmp);
+                    if (random_double() <= probability) {
+                        restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
+                    } 
+                }
+                // haveChange = false;
             }
         } else {
             if (tr->bestParsimony == randomMP)

@@ -1323,7 +1323,8 @@ typedef struct {
     unsigned int bestParsimony;
     unsigned int *parsimonyScore;
 
-    unsigned int currentParsimony;
+    unsigned int bestScoreThisIter;
+    unsigned int currentScore;
 
 
     unsigned int oldScore;
