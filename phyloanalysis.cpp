@@ -879,7 +879,24 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		outError(ERR_WRITE_OUTPUT, outfile);
 	}
 
-	mpiout << endl << "Analysis results written to: " << endl
+	if (MPIHelper::getInstance().isMaster() && params.write_iter_score) {
+        std::cout << "\nWrite best score after each iteration to file " << params.out_prefix << ".iter_score.csv\n";
+
+        string csv_file_name = params.out_prefix;
+        csv_file_name += ".iter_score.csv";
+
+        std::ofstream outputFile(csv_file_name);
+
+        outputFile << "Iter,Best score\n";
+
+        for (int i = 0; i < tree.list_score.size(); i++) {
+            outputFile << tree.list_iter[i] << "," << -tree.list_score[i] << "\n";
+        }
+
+        outputFile.close();
+    }
+
+	cout << endl << "Analysis results written to: " << endl
 			<< "  MPBoot report:                 " << params.out_prefix << ".mpboot"
 			<< endl;
 	if (params.compute_ml_tree) {
