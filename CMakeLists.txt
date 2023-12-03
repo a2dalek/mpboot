@@ -38,6 +38,8 @@ set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 1)
 set (iqtree_VERSION_PATCH 0)
 
+set(CMAKE_CXX_STANDARD 14)
+
 set(BUILD_SHARED_LIBS OFF)
 
 message("IQ-TREE flags : ${IQTREE_FLAGS}")
