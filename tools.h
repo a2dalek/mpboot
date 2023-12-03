@@ -1443,6 +1443,9 @@ struct Params {
             sort the NNI before evaluating
      */
     bool nni_sort;
+    
+    /** whether to write out best score after each iteration */
+    bool write_iter_score;
 
     /**
             Obsolete: TRUE to optimize 5 branches around NNI

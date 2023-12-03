@@ -878,6 +878,23 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		outError(ERR_WRITE_OUTPUT, outfile);
 	}
 
+	if (params.write_iter_score) {
+        std::cout << "\nWrite best score after each iteration to file " << params.out_prefix << ".iter_score.csv\n";
+
+        string csv_file_name = params.out_prefix;
+        csv_file_name += ".iter_score.csv";
+
+        std::ofstream outputFile(csv_file_name);
+
+        outputFile << "Iter,Best score\n";
+
+        for (int i = 0; i < tree.list_iter_score.size(); i++) {
+            outputFile << i + 1 << "," << -tree.list_iter_score[i] << "\n";
+        }
+
+        outputFile.close();
+    }
+
 	cout << endl << "Analysis results written to: " << endl
 			<< "  MPBoot report:                 " << params.out_prefix << ".mpboot"
 			<< endl;

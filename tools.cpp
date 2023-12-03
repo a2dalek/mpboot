@@ -582,6 +582,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.is_rooted = false;
     params.sample_size = -1;
     params.repeated_time = 1;
+	params.write_iter_score = false;
     //params.nr_output = 10000;
     params.nr_output = 0;
     //params.smode = EXHAUSTIVE;
@@ -2616,6 +2617,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-write_best_trees") == 0) {
 				params.write_best_trees = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-write_iter_score") == 0) {
+				params.write_iter_score = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-x") == 0) {

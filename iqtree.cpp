@@ -1960,6 +1960,10 @@ double IQTree::doTreeSearch() {
              printResultTree();
         }
 
+        if (params->write_iter_score) {
+            list_iter_score.push_back(bestScore);
+        }
+
         // check whether the tree can be put into the reference set
         if (params->snni) {
         	candidateTrees.update(imd_tree, curScore);

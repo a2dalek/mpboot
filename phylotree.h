@@ -1286,6 +1286,8 @@ public:
      */
     Params* params;
 
+    std::vector<int> list_iter_score;
+
 
     /**
             assign the leaf names with the alignment sequence names, using the leaf ID for assignment.
