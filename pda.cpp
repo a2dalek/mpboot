@@ -2187,6 +2187,10 @@ int main(int argc, char *argv[])
 	Params params;
 	parseArg(argc, argv, params);
 
+	if (params.start_temp <= params.final_temp) {
+		outError("Start temperature must be higher than final temperature.");
+	}
+
 	_log_file = params.out_prefix;
 	_log_file += ".log";
 	startLogFile();

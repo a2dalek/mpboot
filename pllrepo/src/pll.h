@@ -335,6 +335,14 @@ extern "C" {
 typedef int pllBoolean;
 
 /* @brief PLL instance attribute structure */
+
+enum CoolingSchedulePll {
+        EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL = 0,
+        EXPONENTIAL_ADDITIVE_COOLING_PLL = 1,
+        LINEAR_ADDITIVE_COOLING_PLL = 2,
+        LINEAR_MULTIPLICATIVE_COOLING_PLL = 3
+};
+
 typedef struct {
     int rateHetModel;
     int fastScaling;
@@ -342,6 +350,14 @@ typedef struct {
     int useRecom;
     long randomNumberSeed;
     int numberOfThreads;
+    enum CoolingSchedulePll coolingSchedule;
+    int maxCoolingTimes; 
+    double startTemp;
+    double finalTemp;
+    double firstAcceptProbility;
+    pllBoolean plusSA;
+    pllBoolean pureSA;
+    pllBoolean autoSA;
 } pllInstanceAttr;
 
 /** @brief Stores the recomputation-state of likelihood vectors  */
@@ -1296,12 +1312,16 @@ typedef struct {
 
     char **nameList;   /**< list of tips names (read from the phylip file) */
     char *tree_string; /**< the newick representaion of the topology */
+    char *best_tree_string;
     char *tree0;
     char *tree1;
     int treeStringLength;
 
     unsigned int bestParsimony;
     unsigned int *parsimonyScore;
+
+
+    unsigned int oldScore;
 
     double bestOfNode;
     nodeptr removeNode; /**< the node that has been removed. Together with \a
@@ -1362,6 +1382,24 @@ typedef struct {
     double likelihoodEpsilon;
     pllBoolean useCheckpoint;
 
+    enum CoolingSchedulePll coolingSchedule;
+    int maxCoolingTimes; 
+    int limitTrees;
+    int coolingTimes;
+    double deltaCoefficient;
+    double temperature;
+    double last_temp;
+    double coolingAmount;
+    double startTemp;
+    double finalTemp;
+    double firstAcceptProbility;
+    int stepCount;
+    pllBoolean usingSA;
+    pllBoolean plusSA;
+    pllBoolean pureSA;
+    pllBoolean autoSA;
+    unsigned long long sumOfDelta;
+    unsigned long long numOfDelta;
 } pllInstance;
 
 /** @brief Stores data related to a NNI move  */

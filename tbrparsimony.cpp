@@ -133,6 +133,7 @@ extern Params *globalParam;
 static IQTree *iqtree = NULL;
 static unsigned long bestTreeScoreHits; // to count hits to bestParsimony
 static unsigned int randomMP;
+static bool haveChange = false;
 
 extern parsimonyNumber *pllCostMatrix;    // Diep: For weighted version
 extern int pllCostNstates;                // Diep: For weighted version
@@ -1128,7 +1129,7 @@ static bool restoreTreeRearrangeParsimonyTBR(pllInstance *tr, partitionList *pr,
     r = (r->xPars ? r : r->back);
     assert(pllTbrConnectSubtrees(tr, q, r, &tr->TBR_removeBranch,
                                  tr->TBR_insertNNI));
-    evaluateParsimonyTBR(tr, pr, q, r, tr->TBR_removeBranch, perSiteScores);
+    *tr->parsimonyScore = evaluateParsimonyTBR(tr, pr, q, r, tr->TBR_removeBranch, perSiteScores);
     tr->curRoot = tr->TBR_removeBranch;
     tr->curRootBack = tr->TBR_removeBranch->back;
 
@@ -1240,7 +1241,7 @@ static int pllTestTBRMove(pllInstance *tr, partitionList *pr, nodeptr branch1,
     tr->curRoot = TBR_removeBranch;
     tr->curRootBack = TBR_removeBranch->back;
 
-    if (perSiteScores) {
+    if (perSiteScores && !tr->usingSA) {
         // If UFBoot is enabled ...
         pllSaveCurrentTreeTBRParsimony(tr, pr, mp); // run UFBoot
     }
@@ -1248,18 +1249,88 @@ static int pllTestTBRMove(pllInstance *tr, partitionList *pr, nodeptr branch1,
     if (globalParam->tbr_test_draw == true) {
         drawTreeTBR(tr, pr);
     }
-    if (mp < tr->bestParsimony)
-        bestTreeScoreHits = 1;
-    else if (mp == tr->bestParsimony)
-        bestTreeScoreHits++;
-    if ((mp < tr->bestParsimony) ||
-        ((mp == tr->bestParsimony) &&
-         (random_double() <= 1.0 / bestTreeScoreHits))) {
-        tr->bestParsimony = mp;
-        tr->TBR_insertBranch1 = branch1;
-        tr->TBR_insertBranch2 = branch2;
-        tr->TBR_removeBranch = TBR_removeBranch;
-        tr->TBR_insertNNI = insertNNI;
+
+    if (tr->usingSA) {
+        if (!perSiteScores || (!haveChange)) {
+            if (mp < tr->bestParsimony) {
+                pllTreeToNewick(tr->tree_string, tr, pr,
+                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                      PLL_SUMMARIZE_LH, 0, 0);
+                tr->bestParsimony = mp;
+                bestTreeScoreHits = 1;
+                haveChange = true;
+            } else if (mp == tr->bestParsimony) {
+                bestTreeScoreHits++;
+                if (random_double() < (double)1/bestTreeScoreHits) {
+                    haveChange = true;
+                }
+            } else if (tr->temperature >= tr->finalTemp) {
+                int tmpBestParsimony = tr->bestParsimony;
+                int tmpMP = mp;
+                int delta = tmpBestParsimony - tmpMP;
+                double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
+                tr->sumOfDelta += abs(delta);
+                tr->numOfDelta++;
+                double probability = exp(tmp);
+                if (random_double() <= probability) {
+                    haveChange = true;
+                } 
+            }
+
+            if (haveChange) {
+                tr->TBR_insertBranch1 = branch1;
+                tr->TBR_insertBranch2 = branch2;
+                tr->TBR_removeBranch = TBR_removeBranch;
+                tr->TBR_insertNNI = insertNNI;
+            }
+        }
+
+        tr->stepCount++; 
+
+        if (tr->stepCount == tr->limitTrees)  {
+            switch (tr->coolingSchedule)
+            {
+                case LINEAR_ADDITIVE_COOLING_PLL:
+                    tr->temperature -= tr->coolingAmount;
+                break;
+
+                case LINEAR_MULTIPLICATIVE_COOLING_PLL:
+                    tr->temperature = tr->startTemp / (1 + tr->coolingAmount * tr->coolingTimes);
+                break;
+
+                case EXPONENTIAL_ADDITIVE_COOLING_PLL:
+                {
+                    double deltaTemp = tr->startTemp - tr->finalTemp;
+                    tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+                }
+                break;
+
+                case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                    tr->temperature *= tr->coolingAmount;
+                break;
+            }
+
+            tr->coolingTimes++;
+            tr->stepCount = 0;
+        }
+    } else {
+        if (mp > tr->bestParsimony) {
+            tr->numOfDelta++;
+            tr->sumOfDelta += mp - tr->bestParsimony;
+        }
+        if (mp < tr->bestParsimony)
+            bestTreeScoreHits = 1;
+        else if (mp == tr->bestParsimony)
+            bestTreeScoreHits++;
+        if ((mp < tr->bestParsimony) ||
+            ((mp == tr->bestParsimony) &&
+            (random_double() <= 1.0 / bestTreeScoreHits))) {
+                tr->bestParsimony = mp;
+                tr->TBR_insertBranch1 = branch1;
+                tr->TBR_insertBranch2 = branch2;
+                tr->TBR_removeBranch = TBR_removeBranch;
+                tr->TBR_insertNNI = insertNNI;
+        }
     }
 
     /* restore */
@@ -1369,9 +1440,9 @@ static void pllTraverseUpdateTBRVer2Q(pllInstance *tr, partitionList *pr,
 
     /* traverse the q subtree */
     if ((!isTip(q->number, tr->mxtips)) && (maxtrav - 1 >= 0)) {
-        pllTraverseUpdateTBRVer2Q(tr, pr, p, q->next->back, r, mintrav - 1,
+        if (perSiteScores || (!perSiteScores && !haveChange)) pllTraverseUpdateTBRVer2Q(tr, pr, p, q->next->back, r, mintrav - 1,
                                   maxtrav - 1, distP, distQ + 1, perSiteScores);
-        pllTraverseUpdateTBRVer2Q(tr, pr, p, q->next->next->back, r,
+        if (perSiteScores || (!perSiteScores && !haveChange)) pllTraverseUpdateTBRVer2Q(tr, pr, p, q->next->next->back, r,
                                   mintrav - 1, maxtrav - 1, distP, distQ + 1,
                                   perSiteScores);
     }
@@ -1392,13 +1463,13 @@ static void pllTraverseUpdateTBRVer2P(pllInstance *tr, partitionList *pr,
                                       nodeptr p, nodeptr q, nodeptr *r,
                                       int mintrav, int maxtrav, int distP,
                                       int distQ, int perSiteScores) {
-    pllTraverseUpdateTBRVer2Q(tr, pr, p, q, r, mintrav, maxtrav, distP, distQ,
+    if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2Q(tr, pr, p, q, r, mintrav, maxtrav, distP, distQ,
                               perSiteScores);
     /* traverse the p subtree */
     if ((!isTip(p->number, tr->mxtips)) && (maxtrav - 1 >= 0)) {
-        pllTraverseUpdateTBRVer2P(tr, pr, p->next->back, q, r, mintrav - 1,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p->next->back, q, r, mintrav - 1,
                                   maxtrav - 1, distP + 1, distQ, perSiteScores);
-        pllTraverseUpdateTBRVer2P(tr, pr, p->next->next->back, q, r,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p->next->next->back, q, r,
                                   mintrav - 1, maxtrav - 1, distP + 1, distQ,
                                   perSiteScores);
     }
@@ -1617,33 +1688,33 @@ static int pllComputeTBRVer2(pllInstance *tr, partitionList *pr, nodeptr p,
     assert(pllTbrRemoveBranch(tr, pr, p));
 
     /* recursively traverse and perform TBR */
-    pllTraverseUpdateTBRVer2P(tr, pr, p1, q1, &p, mintrav, maxtrav, 0, 0,
+    if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p1, q1, &p, mintrav, maxtrav, 0, 0,
                               perSiteScores);
     if (!isTip(q2->number, tr->mxtips)) {
-        pllTraverseUpdateTBRVer2P(tr, pr, p1, q2->next->back, &p, mintrav - 1,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p1, q2->next->back, &p, mintrav - 1,
                                   maxtrav - 1, 0, 1, perSiteScores);
-        pllTraverseUpdateTBRVer2P(tr, pr, p1, q2->next->next->back, &p,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p1, q2->next->next->back, &p,
                                   mintrav - 1, maxtrav - 1, 0, 1,
                                   perSiteScores);
     }
 
     if (!isTip(p2->number, tr->mxtips)) {
-        pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back, q1, &p, mintrav - 1,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back, q1, &p, mintrav - 1,
                                   maxtrav - 1, 1, 0, perSiteScores);
-        pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back, q1, &p,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back, q1, &p,
                                   mintrav - 1, maxtrav - 1, 1, 0,
                                   perSiteScores);
         if (!isTip(q2->number, tr->mxtips)) {
-            pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back, q2->next->back,
+            if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back, q2->next->back,
                                       &p, mintrav - 2, maxtrav - 2, 1, 1,
                                       perSiteScores);
-            pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back,
+            if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->back,
                                       q2->next->next->back, &p, mintrav - 2,
                                       maxtrav - 2, 1, 1, perSiteScores);
-            pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back,
+            if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back,
                                       q2->next->back, &p, mintrav - 2,
                                       maxtrav - 2, 1, 1, perSiteScores);
-            pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back,
+            if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRVer2P(tr, pr, p2->next->next->back,
                                       q2->next->next->back, &p, mintrav - 2,
                                       maxtrav - 2, 1, 1, perSiteScores);
         }
@@ -1758,18 +1829,88 @@ static int pllTestTBRMoveLeaf(pllInstance *tr, partitionList *pr,
     if (globalParam->tbr_test_draw == true) {
         drawTreeTBR(tr, pr);
     }
-    if (mp < tr->bestParsimony)
-        bestTreeScoreHits = 1;
-    else if (mp == tr->bestParsimony)
-        bestTreeScoreHits++;
 
-    if ((mp < tr->bestParsimony) ||
-        ((mp == tr->bestParsimony) &&
-         (random_double() <= 1.0 / bestTreeScoreHits))) {
-        tr->bestParsimony = mp;
-        tr->TBR_insertBranch1 =
-            (insertBranch->xPars ? insertBranch : insertBranch->back);
-        tr->TBR_removeBranch = p;
+    if (tr->usingSA) {
+        if (!perSiteScores || (perSiteScores && !haveChange)) {
+            if (mp < tr->bestParsimony) {
+                pllTreeToNewick(tr->tree_string, tr, pr,
+                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                      PLL_SUMMARIZE_LH, 0, 0);
+                bestTreeScoreHits = 1;
+                haveChange = true;
+                tr->bestParsimony = mp;
+            } else if (mp == tr->bestParsimony) {
+                bestTreeScoreHits++;
+                if (random_double() <= 1.0 / bestTreeScoreHits) {
+                    haveChange = true;
+                }
+            } 
+            else if (tr->temperature >= tr->finalTemp) {
+                int tmpBestParsimony = tr->bestParsimony;
+                int tmpMP = mp;
+                int delta = tmpBestParsimony - tmpMP;
+                double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
+                tr->sumOfDelta += abs(delta);
+                tr->numOfDelta++;
+                double probability = exp(tmp);
+                if (random_double() <= probability) {
+                    haveChange = true;
+                }
+            }
+
+            if (haveChange) {
+                tr->TBR_insertBranch1 =
+                    (insertBranch->xPars ? insertBranch : insertBranch->back);
+                tr->TBR_removeBranch = p;
+            }
+        }
+    
+        tr->stepCount++; 
+    
+        if (tr->stepCount == tr->limitTrees)  {
+            switch (tr->coolingSchedule)
+            {
+                case LINEAR_ADDITIVE_COOLING_PLL:
+                    tr->temperature -= tr->coolingAmount;
+                break;
+
+                case LINEAR_MULTIPLICATIVE_COOLING_PLL:
+                    tr->temperature = tr->startTemp / (1 + tr->coolingAmount * tr->coolingTimes);
+                break;
+
+                case EXPONENTIAL_ADDITIVE_COOLING_PLL:
+                {
+                    double deltaTemp = tr->startTemp - tr->finalTemp;
+                    tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+                }
+                break;
+
+                case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                    tr->temperature *= tr->coolingAmount;
+                break;
+            }
+
+            tr->coolingTimes++;
+            tr->stepCount = 0;
+        }
+    } else {
+        if (mp > tr->bestParsimony) {
+            tr->numOfDelta++;
+            tr->sumOfDelta += mp - tr->bestParsimony;
+        }
+        if (mp < tr->bestParsimony)
+            bestTreeScoreHits = 1;
+        else if (mp == tr->bestParsimony)
+            bestTreeScoreHits++;
+
+        if ((mp < tr->bestParsimony) ||
+            ((mp == tr->bestParsimony) &&
+            (random_double() <= 1.0 / bestTreeScoreHits))) {
+                tr->bestParsimony = mp;
+                tr->TBR_insertBranch1 =
+                    (insertBranch->xPars ? insertBranch : insertBranch->back);
+                tr->TBR_removeBranch = p;
+        }
     }
 
     // Remove
@@ -1790,10 +1931,10 @@ static void pllTraverseUpdateTBRLeaf(pllInstance *tr, partitionList *pr,
         }
     }
     if (!isTip(p->number, tr->mxtips) && maxtrav - 1 >= 0) {
-        pllTraverseUpdateTBRLeaf(tr, pr, p->next->back, removeBranch,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p->next->back, removeBranch,
                                  mintrav - 1, maxtrav - 1, distP + 1,
                                  perSiteScores);
-        pllTraverseUpdateTBRLeaf(tr, pr, p->next->next->back, removeBranch,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p->next->next->back, removeBranch,
                                  mintrav - 1, maxtrav - 1, distP + 1,
                                  perSiteScores);
     }
@@ -1824,16 +1965,16 @@ static int pllComputeTBRLeaf(pllInstance *tr, partitionList *pr, nodeptr p,
     p->next->back = p->next->next->back = NULL;
 
     if (!isTip(p1->number, tr->mxtips)) {
-        pllTraverseUpdateTBRLeaf(tr, pr, p1->next->back, p, mintrav - 1,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p1->next->back, p, mintrav - 1,
                                  maxtrav - 1, 1, perSiteScores);
-        pllTraverseUpdateTBRLeaf(tr, pr, p1->next->next->back, p, mintrav - 1,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p1->next->next->back, p, mintrav - 1,
                                  maxtrav - 1, 1, perSiteScores);
     }
 
     if (!isTip(p2->number, tr->mxtips)) {
-        pllTraverseUpdateTBRLeaf(tr, pr, p2->next->back, p, mintrav - 1,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p2->next->back, p, mintrav - 1,
                                  maxtrav - 1, 1, perSiteScores);
-        pllTraverseUpdateTBRLeaf(tr, pr, p2->next->next->back, p, mintrav - 1,
+        if ((!tr->usingSA) || (perSiteScores || !haveChange)) pllTraverseUpdateTBRLeaf(tr, pr, p2->next->next->back, p, mintrav - 1,
                                  maxtrav - 1, 1, perSiteScores);
     }
 
@@ -1864,7 +2005,7 @@ static bool restoreTreeRearrangeParsimonyTBRLeaf(pllInstance *tr,
     assert(tr->TBR_removeBranch->xPars);
     hookupDefault(r, tr->TBR_removeBranch->next);
     hookupDefault(rb, tr->TBR_removeBranch->next->next);
-    evaluateParsimonyTBR(tr, pr, tr->TBR_removeBranch->back, r,
+    *tr->parsimonyScore = evaluateParsimonyTBR(tr, pr, tr->TBR_removeBranch->back, r,
                          tr->TBR_removeBranch, perSiteScores);
     tr->curRoot = tr->TBR_removeBranch;
     tr->curRootBack = tr->TBR_removeBranch->back;
@@ -1963,7 +2104,6 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         first_call = false;
     }
 
-    int i;
     unsigned int startMP;
 
     assert(!tr->constrained);
@@ -1979,118 +2119,305 @@ int pllOptimizeTbrParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     unsigned int bestIterationScoreHits = 1;
     randomMP = tr->bestParsimony;
 
-    do {
-        // nodeRectifierPars(tr, false);
-        nodeRectifierParsVer2(tr, false);
-        startMP = randomMP;
-        for (int i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
-            bool isLeaf = isTip(tr->nodep_dfs[i]->number, tr->mxtips) ||
+    if (tr->plusSA) {
+        cout<<"Begin score: "<<tr->bestParsimony<<endl;
+        tr->usingSA = false;
+        tr->numOfDelta = 0;
+        tr->sumOfDelta = 0;
+        do {
+            nodeRectifierParsVer2(tr, false);
+            startMP = randomMP;
+            for (int i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                bool isLeaf = isTip(tr->nodep_dfs[i]->number, tr->mxtips) ||
                           isTip(tr->nodep_dfs[i]->back->number, tr->mxtips);
-            if (isLeaf || globalParam->tbr_restore_ver2 == false) {
-                tr->TBR_removeBranch = NULL;
-                tr->TBR_insertBranch1 = tr->TBR_insertBranch2 = NULL;
-                tr->TBR_insertNNI = false;
-                bestTreeScoreHits = 1;
-            }
-            if (isLeaf) {
-                pllComputeTBRLeaf(tr, pr, tr->nodep_dfs[i], mintrav, maxtrav,
+                if (isLeaf || globalParam->tbr_restore_ver2 == false) {
+                    tr->TBR_removeBranch = NULL;
+                    tr->TBR_insertBranch1 = tr->TBR_insertBranch2 = NULL;
+                    tr->TBR_insertNNI = false;
+                    bestTreeScoreHits = 1;
+                }
+                if (isLeaf) {
+                    pllComputeTBRLeaf(tr, pr, tr->nodep_dfs[i], mintrav, maxtrav,
                                   perSiteScores);
-                if (tr->bestParsimony == randomMP)
-                    bestIterationScoreHits++;
-                if (tr->bestParsimony < randomMP)
-                    bestIterationScoreHits = 1;
-                if (((tr->bestParsimony < randomMP) ||
-                     ((tr->bestParsimony == randomMP) &&
-                      (random_double() <= 1.0 / bestIterationScoreHits))) &&
-                    tr->TBR_removeBranch && tr->TBR_insertBranch1) {
-                    restoreTreeRearrangeParsimonyTBRLeaf(tr, pr, perSiteScores);
-                    randomMP = tr->bestParsimony;
-                }
-            } else {
-                if (globalParam->tbr_restore_ver2 == true) {
-                    pllComputeTBRVer3(tr, pr, tr->nodep_dfs[i], mintrav,
-                                      maxtrav, perSiteScores);
-                } else if (globalParam->tbr_traverse_ver1 == true) {
-                    pllComputeTBRVer1(tr, pr, tr->nodep_dfs[i], mintrav,
-                                      maxtrav, perSiteScores);
-                } else {
-                    pllComputeTBRVer2(tr, pr, tr->nodep_dfs[i], mintrav,
-                                      maxtrav, perSiteScores);
-                }
-                if (globalParam->tbr_restore_ver2 == false) {
                     if (tr->bestParsimony == randomMP)
                         bestIterationScoreHits++;
                     if (tr->bestParsimony < randomMP)
                         bestIterationScoreHits = 1;
                     if (((tr->bestParsimony < randomMP) ||
-                         ((tr->bestParsimony == randomMP) &&
-                          (random_double() <= 1.0 / bestIterationScoreHits))) &&
-                        tr->TBR_removeBranch && tr->TBR_insertBranch1 &&
-                        tr->TBR_insertBranch2) {
-                        restoreTreeRearrangeParsimonyTBR(tr, pr, perSiteScores);
+                        ((tr->bestParsimony == randomMP) &&
+                        (random_double() <= 1.0 / bestIterationScoreHits))) &&
+                        tr->TBR_removeBranch && tr->TBR_insertBranch1) {
+                            restoreTreeRearrangeParsimonyTBRLeaf(tr, pr, perSiteScores);
+                            randomMP = tr->bestParsimony;
+                    }
+                } else {
+                    if (globalParam->tbr_restore_ver2 == true) {
+                        pllComputeTBRVer3(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    } else if (globalParam->tbr_traverse_ver1 == true) {
+                        pllComputeTBRVer1(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    } else {
+                        pllComputeTBRVer2(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    }
+                    if (globalParam->tbr_restore_ver2 == false) {
+                        if (tr->bestParsimony == randomMP)
+                            bestIterationScoreHits++;
+                        if (tr->bestParsimony < randomMP)
+                            bestIterationScoreHits = 1;
+                        if (((tr->bestParsimony < randomMP) ||
+                            ((tr->bestParsimony == randomMP) &&
+                            (random_double() <= 1.0 / bestIterationScoreHits))) &&
+                            tr->TBR_removeBranch && tr->TBR_insertBranch1 &&
+                            tr->TBR_insertBranch2) {
+                                restoreTreeRearrangeParsimonyTBR(tr, pr, perSiteScores);
+                                randomMP = tr->bestParsimony;
+                            }
+                    }
+                }
+            } 
+        } while (randomMP < startMP);
+
+        cout<<"Score after hill-climbing: "<<tr->bestParsimony<<endl;
+        tr->oldScore = tr->bestParsimony;
+        pllTreeToNewick(tr->tree_string, tr, pr,
+                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                      PLL_SUMMARIZE_LH, 0, 0);
+        
+        tr->usingSA = true;
+
+        switch (tr->coolingSchedule)
+        {
+            case LINEAR_ADDITIVE_COOLING_PLL:
+                tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
+            break;
+
+            case LINEAR_MULTIPLICATIVE_COOLING_PLL:
+                tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
+            break;
+
+
+            case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
+            break;
+        }
+
+        bestIterationScoreHits = 1;
+        tr->coolingTimes = 0;
+        tr->temperature = tr->startTemp;
+        tr->stepCount = 0;
+        tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
+
+        while (tr->coolingTimes <= tr->maxCoolingTimes) {
+        // nodeRectifierPars(tr, false);
+            nodeRectifierParsVer2(tr, false);
+            startMP = randomMP;
+            for (int i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                haveChange = false;
+                bool isLeaf = isTip(tr->nodep_dfs[i]->number, tr->mxtips) ||
+                          isTip(tr->nodep_dfs[i]->back->number, tr->mxtips);
+                if (isLeaf || globalParam->tbr_restore_ver2 == false) {
+                    tr->TBR_removeBranch = NULL;
+                    tr->TBR_insertBranch1 = tr->TBR_insertBranch2 = NULL;
+                    tr->TBR_insertNNI = false;
+                    bestTreeScoreHits = 1;
+                }
+                if (isLeaf) {
+                    pllComputeTBRLeaf(tr, pr, tr->nodep_dfs[i], mintrav, maxtrav,
+                                  perSiteScores);
+
+                    if (haveChange && tr->TBR_removeBranch && tr->TBR_insertBranch1) {
+                        restoreTreeRearrangeParsimonyTBRLeaf(tr, pr, perSiteScores);
                         randomMP = tr->bestParsimony;
+                        haveChange = false;
+                    }
+                } else {
+                    if (globalParam->tbr_restore_ver2 == true) {
+                        pllComputeTBRVer3(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    } else if (globalParam->tbr_traverse_ver1 == true) {
+                        pllComputeTBRVer1(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    } else {
+                        pllComputeTBRVer2(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    }
+                    if (globalParam->tbr_restore_ver2 == false) {
+                        if (haveChange && tr->TBR_removeBranch && tr->TBR_insertBranch1  &&
+                            tr->TBR_insertBranch2) {
+                            restoreTreeRearrangeParsimonyTBR(tr, pr, perSiteScores);
+                            randomMP = tr->bestParsimony;
+                            haveChange = false;
+                        }
                     }
                 }
             }
         }
-        /*
-        for (i = 1; i <= tr->mxtips; i++) {
-            tr->TBR_removeBranch = tr->TBR_insertBranch1 = NULL;
-            tr->TBR_insertNNI = false;
-            bestTreeScoreHits = 1;
-            pllComputeTBRLeaf(tr, pr, tr->nodep[i]->back, mintrav, maxtrav,
-                              perSiteScores);
-            if (tr->bestParsimony == randomMP)
-                bestIterationScoreHits++;
-            if (tr->bestParsimony < randomMP)
-                bestIterationScoreHits = 1;
-            if (((tr->bestParsimony < randomMP) ||
-                 ((tr->bestParsimony == randomMP) &&
-                  (random_double() <= 1.0 / bestIterationScoreHits))) &&
-                tr->TBR_removeBranch && tr->TBR_insertBranch1) {
-                restoreTreeRearrangeParsimonyTBRLeaf(tr, pr, perSiteScores);
-                randomMP = tr->bestParsimony;
-            }
+
+        if (tr->bestParsimony < iqtree->globalScore) {
+            iqtree->cntItersNotImproved = 0;
+            iqtree->globalScore = tr->bestParsimony;
         }
 
-        for (i = tr->mxtips + 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
-            if (isTip(tr->nodep[i]->number, tr->mxtips) ||
-                isTip(tr->nodep[i]->back->number, tr->mxtips)) {
-                continue;
-            }
-            if (globalParam->tbr_restore_ver2 == false) {
-                tr->TBR_removeBranch = NULL;
-                tr->TBR_insertBranch1 = tr->TBR_insertBranch2 = NULL;
-                tr->TBR_insertNNI = false;
-                bestTreeScoreHits = 1;
-            }
-            if (globalParam->tbr_restore_ver2 == true) {
-                pllComputeTBRVer3(tr, pr, tr->nodep[i], mintrav, maxtrav,
+        cout<<"Score after hill-climbing with SA: "<<tr->bestParsimony<<endl;
+
+        char* bestTreeString = tr->tree_string;
+        pllNewickTree *tmpTree = pllNewickParseString(bestTreeString);
+        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
+        pllNewickParseDestroy(&tmpTree);
+        
+        return startMP;
+    }
+
+    if (tr->usingSA || tr->pureSA) {
+        pllTreeToNewick(tr->tree_string, tr, pr,
+                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                      PLL_SUMMARIZE_LH, 0, 0);
+        
+        if (tr->pureSA) tr->usingSA = true;
+        switch (tr->coolingSchedule)
+        {
+            case LINEAR_ADDITIVE_COOLING_PLL:
+                tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
+            break;
+
+            case LINEAR_MULTIPLICATIVE_COOLING_PLL:
+                tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
+            break;
+
+
+            case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
+            break;
+        }
+
+        bestIterationScoreHits = 1;
+        tr->coolingTimes = 0;
+        tr->temperature = tr->startTemp;
+        tr->stepCount = 0;
+        tr->limitTrees = (tr->mxtips + tr->mxtips - 2) * 5 * (1<<(maxtrav-1)) / tr->maxCoolingTimes;
+        tr->numOfDelta = tr->bestParsimony/200;
+        tr->sumOfDelta = 1;
+
+        while (tr->coolingTimes <= tr->maxCoolingTimes) {
+        // nodeRectifierPars(tr, false);
+            nodeRectifierParsVer2(tr, false);
+            startMP = randomMP;
+            for (int i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                haveChange = false;
+                bool isLeaf = isTip(tr->nodep_dfs[i]->number, tr->mxtips) ||
+                          isTip(tr->nodep_dfs[i]->back->number, tr->mxtips);
+                if (isLeaf || globalParam->tbr_restore_ver2 == false) {
+                    tr->TBR_removeBranch = NULL;
+                    tr->TBR_insertBranch1 = tr->TBR_insertBranch2 = NULL;
+                    tr->TBR_insertNNI = false;
+                    bestTreeScoreHits = 1;
+                }
+                if (isLeaf) {
+                    pllComputeTBRLeaf(tr, pr, tr->nodep_dfs[i], mintrav, maxtrav,
                                   perSiteScores);
-            } else if (globalParam->tbr_traverse_ver1 == true) {
-                pllComputeTBRVer1(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                                  perSiteScores);
-            } else {
-                assert(pllComputeTBRVer2(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                                         perSiteScores));
-            }
-            if (globalParam->tbr_restore_ver2 == false) {
-                if (tr->bestParsimony == randomMP)
-                    bestIterationScoreHits++;
-                if (tr->bestParsimony < randomMP)
-                    bestIterationScoreHits = 1;
-                if (((tr->bestParsimony < randomMP) ||
-                     ((tr->bestParsimony == randomMP) &&
-                      (random_double() <= 1.0 / bestIterationScoreHits))) &&
-                    tr->TBR_removeBranch && tr->TBR_insertBranch1 &&
-                    tr->TBR_insertBranch2) {
-                    restoreTreeRearrangeParsimonyTBR(tr, pr, perSiteScores);
-                    randomMP = tr->bestParsimony;
+
+                    if (haveChange && tr->TBR_removeBranch && tr->TBR_insertBranch1) {
+                        restoreTreeRearrangeParsimonyTBRLeaf(tr, pr, perSiteScores);
+                        randomMP = tr->bestParsimony;
+                        haveChange = false;
+                    }
+                } else {
+                    if (globalParam->tbr_restore_ver2 == true) {
+                        pllComputeTBRVer3(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    } else if (globalParam->tbr_traverse_ver1 == true) {
+                        pllComputeTBRVer1(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    } else {
+                        pllComputeTBRVer2(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    }
+                    if (globalParam->tbr_restore_ver2 == false) {
+                        if (haveChange && tr->TBR_removeBranch && tr->TBR_insertBranch1  &&
+                            tr->TBR_insertBranch2) {
+                            restoreTreeRearrangeParsimonyTBR(tr, pr, perSiteScores);
+                            randomMP = tr->bestParsimony;
+                            haveChange = false;
+                        }
+                    }
                 }
             }
         }
-        */
-    } while (randomMP < startMP);
+
+        if (tr->bestParsimony < iqtree->globalScore) {
+            iqtree->cntItersNotImproved = 0;
+            iqtree->globalScore = tr->bestParsimony;
+        }
+
+        char* bestTreeString = tr->tree_string;
+        pllNewickTree *tmpTree = pllNewickParseString(bestTreeString);
+        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
+        pllNewickParseDestroy(&tmpTree);
+
+        return tr->bestParsimony;
+    } else {
+        do {
+            nodeRectifierParsVer2(tr, false);
+            startMP = randomMP;
+            for (int i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                bool isLeaf = isTip(tr->nodep_dfs[i]->number, tr->mxtips) ||
+                          isTip(tr->nodep_dfs[i]->back->number, tr->mxtips);
+                if (isLeaf || globalParam->tbr_restore_ver2 == false) {
+                    tr->TBR_removeBranch = NULL;
+                    tr->TBR_insertBranch1 = tr->TBR_insertBranch2 = NULL;
+                    tr->TBR_insertNNI = false;
+                    bestTreeScoreHits = 1;
+                }
+                if (isLeaf) {
+                    pllComputeTBRLeaf(tr, pr, tr->nodep_dfs[i], mintrav, maxtrav,
+                                  perSiteScores);
+                    if (tr->bestParsimony == randomMP)
+                        bestIterationScoreHits++;
+                    if (tr->bestParsimony < randomMP)
+                        bestIterationScoreHits = 1;
+                    if (((tr->bestParsimony < randomMP) ||
+                        ((tr->bestParsimony == randomMP) &&
+                        (random_double() <= 1.0 / bestIterationScoreHits))) &&
+                        tr->TBR_removeBranch && tr->TBR_insertBranch1) {
+                            restoreTreeRearrangeParsimonyTBRLeaf(tr, pr, perSiteScores);
+                            randomMP = tr->bestParsimony;
+                    }
+                } else {
+                    if (globalParam->tbr_restore_ver2 == true) {
+                        pllComputeTBRVer3(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    } else if (globalParam->tbr_traverse_ver1 == true) {
+                        pllComputeTBRVer1(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    } else {
+                        pllComputeTBRVer2(tr, pr, tr->nodep_dfs[i], mintrav,
+                                      maxtrav, perSiteScores);
+                    }
+                    if (globalParam->tbr_restore_ver2 == false) {
+                        if (tr->bestParsimony == randomMP)
+                            bestIterationScoreHits++;
+                        if (tr->bestParsimony < randomMP)
+                            bestIterationScoreHits = 1;
+                        if (((tr->bestParsimony < randomMP) ||
+                            ((tr->bestParsimony == randomMP) &&
+                            (random_double() <= 1.0 / bestIterationScoreHits))) &&
+                            tr->TBR_removeBranch && tr->TBR_insertBranch1 &&
+                            tr->TBR_insertBranch2) {
+                                restoreTreeRearrangeParsimonyTBR(tr, pr, perSiteScores);
+                                randomMP = tr->bestParsimony;
+                            }
+                    }
+                }
+            } 
+        } while (randomMP < startMP);
+
+        if (startMP < iqtree->globalScore) {
+            iqtree->cntItersNotImproved = 0;
+            iqtree->globalScore = startMP;
+        }  
+    } 
     return startMP;
 }
 
@@ -2128,6 +2455,8 @@ int pllOptimizeTbrParsimonyMix(pllInstance *tr, partitionList *pr, int mintrav,
 
     unsigned int bestIterationScoreHits = 1;
     randomMP = tr->bestParsimony;
+
+    bestTreeScoreHits = 1;
 
     do {
         // nodeRectifierPars(tr, false);

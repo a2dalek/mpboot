@@ -624,6 +624,7 @@ protected:
      */
     double nni_delta_est;
 
+    int numIterationsBetter;
 
     /**
      *  Vector contains approximated improvement pro NNI at each iterations
