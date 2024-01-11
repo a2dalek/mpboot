@@ -2000,7 +2000,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             // If UFBoot is enabled ...
             pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
         }
-        
+
         if (tr->usingSA) {
             if (mp < tr->bestParsimony) {
                 // cout << "cccc\n";
@@ -2039,7 +2039,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                     haveChange = true;
                     tr->insertNode = q;
                     tr->removeNode = p;
-                    // std::cout << std::setprecision(23) << " " << tmpBestParsimony << " " << mp << std::endl;
+                    std::cout << std::setprecision(23) << " " << tmpBestParsimony << " " << mp << " " << probability << std::endl;
                 } 
             }
         } else {
@@ -3340,6 +3340,9 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         if (tr->pureSA) tr->usingSA = true;
         
         bestIterationScoreHits = 1;
+        tr->numOfDelta = 1;
+        tr->sumOfDelta = tr->bestParsimony/200;
+
         do {
             pllTreeToNewick(tr->best_tree_string, tr, pr,
                       tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
@@ -3357,25 +3360,24 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
 
                 switch (tr->coolingSchedule)
                 {
-                    case LINEAR_ADDITIVE_COOLING_PLL:
+                    case LINEAR_ADDITIVE_COOLING_PLL: {
                         tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
-                    break;
+                        break;
+                    }
 
-                    case LINEAR_MULTIPLICATIVE_COOLING_PLL:
+                    case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
                         tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
-                    break;
+                        break;
+                    }
 
-
-                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
                         tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
-                    break;
+                        break;
+                    }
                 }
             }
 
-            tr->numOfDelta = 1;
-            tr->sumOfDelta = tr->bestParsimony/200;
-            // cout << "hihihih\n";
-            for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
+            for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
                 haveChange = false;
                 haveBetter = false;
                 tr->insertNode = NULL;
@@ -3394,25 +3396,28 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
 
                 switch (tr->coolingSchedule)
                 {
-                    case LINEAR_ADDITIVE_COOLING_PLL:
+                    case LINEAR_ADDITIVE_COOLING_PLL: {
                         tr->temperature -= tr->coolingAmount;
-                    break;
-
-                    case LINEAR_MULTIPLICATIVE_COOLING_PLL:
-                        tr->temperature = tr->startTemp / (1 + tr->coolingAmount * tr->coolingTimes);
-                    break;
-
-                    case EXPONENTIAL_ADDITIVE_COOLING_PLL:
-                    {
-                        double deltaTemp = tr->startTemp - tr->finalTemp;
-                        tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+                        break;
                     }
-                    break;
 
-                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                    case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+                        tr->temperature = tr->last_temp / (1 + tr->coolingAmount * tr->coolingTimes);
+                        break;
+                    }
+
+                    case EXPONENTIAL_ADDITIVE_COOLING_PLL: {
+                        double deltaTemp = tr->last_temp - tr->finalTemp;
+                        tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+                        break;
+                    }
+
+                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
                         tr->temperature *= tr->coolingAmount;
-                    break;
+                        break;
+                    }
                 }
+                
                 if (tr->coolingTimes == tr->maxCoolingTimes) {
                     tr->coolingTimes = 0;
                     tr->temperature = tr->last_temp * 0.5;
@@ -3420,28 +3425,31 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
 
                     switch (tr->coolingSchedule)
                     {
-                        case LINEAR_ADDITIVE_COOLING_PLL:
+                        case LINEAR_ADDITIVE_COOLING_PLL: {
                             tr->coolingAmount = (tr->last_temp - tr->finalTemp) / tr->maxCoolingTimes;
-                        break;
+                            break;
+                        }
 
-                        case LINEAR_MULTIPLICATIVE_COOLING_PLL:
+                        case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
                             tr->coolingAmount = ((tr->last_temp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
-                        break;
+                            break;
+                        }
 
-
-                        case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL:
+                        case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
                             tr->coolingAmount = pow(tr->finalTemp / tr->last_temp, 1.0 / tr->maxCoolingTimes);
-                        break;
+                            break;
+                        }
                     }
                 }
             }
+            // std::cout<<tr->cnt_tree<<std::endl;
         } while (randomMP < startMP);
-
+        
         // Reverse to best tree topology
         pllNewickTree *tmpTree = pllNewickParseString(tr->best_tree_string);
         pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
         pllNewickParseDestroy(&tmpTree);
-        
+
         if (tr->bestParsimony < iqtree->globalScore) {
             iqtree->cntItersNotImproved = 0;
             iqtree->globalScore = tr->bestParsimony;
@@ -3451,7 +3459,8 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
         do {
             startMP = randomMP;
             nodeRectifierPars(tr);
-            for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
+            tr->cnt_tree = 0;
+            for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
                 //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
                 //			i = perm[j];
                 tr->insertNode = NULL;

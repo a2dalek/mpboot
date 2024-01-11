@@ -882,8 +882,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_init_tree = false;
     params.write_local_optimal_trees = false;
     params.coolingSchedule = LINEAR_ADDITIVE_COOLING;
-    params.start_temp = 1e-2;
-    params.final_temp = 1e-4;
+    params.start_temp = 0.025;
+    params.final_temp = 0.005;
     params.maxCoolingTimes = 40;
     params.acceptProbility = 0.075;
     params.plusSA = false;

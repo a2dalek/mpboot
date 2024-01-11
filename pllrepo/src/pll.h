@@ -1400,6 +1400,7 @@ typedef struct {
     pllBoolean autoSA;
     unsigned long long sumOfDelta;
     unsigned long long numOfDelta;
+    unsigned long long cnt_tree;
 } pllInstance;
 
 /** @brief Stores data related to a NNI move  */
