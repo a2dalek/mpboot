@@ -3394,7 +3394,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                     randomMP = tr->bestParsimony;
                 }
 
-                tr->coolingTimes++;
+                if (haveBetter) tr->coolingTimes++;
 
                 switch (tr->coolingSchedule)
                 {
@@ -3422,7 +3422,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 
                 if (tr->coolingTimes == tr->maxCoolingTimes) {
                     tr->coolingTimes = 0;
-                    tr->temperature = tr->last_temp * 0.5;
+                    tr->temperature = (tr->last_temp * 0.5 > tr->finalTemp) ? (tr->last_temp * 0.5) : tr->last_temp;
                     tr->last_temp = tr->temperature;
 
                     switch (tr->coolingSchedule)
@@ -3441,6 +3441,55 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                             tr->coolingAmount = pow(tr->finalTemp / tr->last_temp, 1.0 / tr->maxCoolingTimes);
                             break;
                         }
+                    }
+                }
+            }
+
+            tr->coolingTimes++;
+
+            switch (tr->coolingSchedule) {
+                case LINEAR_ADDITIVE_COOLING_PLL: {
+                    tr->temperature -= tr->coolingAmount;
+                    break;
+                }
+
+                case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+                    tr->temperature = tr->last_temp / (1 + tr->coolingAmount * tr->coolingTimes);
+                    break;
+                }
+
+                case EXPONENTIAL_ADDITIVE_COOLING_PLL: {
+                    double deltaTemp = tr->last_temp - tr->finalTemp;
+                    tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+                    break;
+                }
+
+                case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+                    tr->temperature *= tr->coolingAmount;
+                    break;
+                }
+            }
+            
+            if (tr->coolingTimes == tr->maxCoolingTimes) {
+                tr->coolingTimes = 0;
+                tr->temperature = (tr->last_temp * 0.5 > tr->finalTemp) ? (tr->last_temp * 0.5) : tr->last_temp;
+                tr->last_temp = tr->temperature;
+
+                switch (tr->coolingSchedule)
+                {
+                    case LINEAR_ADDITIVE_COOLING_PLL: {
+                        tr->coolingAmount = (tr->last_temp - tr->finalTemp) / tr->maxCoolingTimes;
+                        break;
+                    }
+
+                    case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+                        tr->coolingAmount = ((tr->last_temp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
+                        break;
+                    }
+
+                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+                        tr->coolingAmount = pow(tr->finalTemp / tr->last_temp, 1.0 / tr->maxCoolingTimes);
+                        break;
                     }
                 }
             }
