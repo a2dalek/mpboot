@@ -883,11 +883,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_local_optimal_trees = false;
     params.coolingSchedule = LINEAR_ADDITIVE_COOLING;
     params.start_temp = 0.025;
-    params.final_temp = 0.0005;
+    params.final_temp = 0.010;
     params.maxCoolingTimes = 40;
     params.acceptProbility = 0.075;
     params.plusSA = false;
     params.pureSA = false;
+    params.sampars = false;
+    params.lvb = false;
     params.autoSA = false;
 
     if (params.nni5) {
@@ -1349,14 +1351,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -start_temp <start_temp>";
-                params.start_temp = (unsigned)convert_double(argv[cnt]);
+                params.start_temp = (double)convert_double(argv[cnt]);
                 continue;
             }
             if (strcmp(argv[cnt], "-final_temp") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use -final_temp <final_temp>";
-                params.final_temp = (unsigned)convert_double(argv[cnt]);
+                params.final_temp = (double)convert_double(argv[cnt]);
                 continue;
             }
             if (strcmp(argv[cnt], "-accept_rate") == 0) {
@@ -2596,6 +2598,16 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "-pure_sa") == 0) {
                 params.pureSA = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-sampars") == 0) {
+                params.sampars = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-lvb") == 0) {
+                params.lvb = true;
                 continue;
             }
 

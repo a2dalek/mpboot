@@ -988,6 +988,10 @@ struct Params {
     bool plusSA;
     bool pureSA;
     bool autoSA;
+    bool sampars;
+    bool lvb;
+    int hamming_score;
+
     /**
             run time of the algorithm
      */

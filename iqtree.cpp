@@ -394,7 +394,8 @@ void IQTree::initTopologyByPLLRandomAdition(Params &params){
   tmpAttr.plusSA = params.plusSA;
   tmpAttr.pureSA = params.pureSA;
   tmpAttr.autoSA = params.autoSA;
-
+  tmpAttr.sampars = params.sampars;
+  tmpAttr.lvb = params.lvb;
 #ifdef _OPENMP
     tmpAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
 #else
@@ -584,6 +585,8 @@ void IQTree::initializePLL(Params &params) {
   pllAttr.plusSA = params.plusSA;
   pllAttr.pureSA = params.pureSA;
   pllAttr.autoSA = params.autoSA;
+  pllAttr.sampars = params.sampars;
+  pllAttr.lvb = params.lvb;
 #ifdef _OPENMP
   pllAttr.numberOfThreads =
       params.num_threads; /* This only affects the pthreads version */

@@ -357,6 +357,8 @@ typedef struct {
     double firstAcceptProbility;
     pllBoolean plusSA;
     pllBoolean pureSA;
+    pllBoolean sampars;
+    pllBoolean lvb;
     pllBoolean autoSA;
 } pllInstanceAttr;
 
@@ -1394,13 +1396,18 @@ typedef struct {
     double finalTemp;
     double firstAcceptProbility;
     int stepCount;
+    int cnt_acc;
+    int cnt_rej;
     pllBoolean usingSA;
     pllBoolean plusSA;
     pllBoolean pureSA;
+    pllBoolean sampars;
+    pllBoolean lvb;
     pllBoolean autoSA;
     unsigned long long sumOfDelta;
     unsigned long long numOfDelta;
     unsigned long long cnt_tree;
+    unsigned long long hamming_score;
 } pllInstance;
 
 /** @brief Stores data related to a NNI move  */
