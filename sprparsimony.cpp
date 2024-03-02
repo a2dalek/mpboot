@@ -3449,7 +3449,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 
                 if (tr->coolingTimes == tr->maxCoolingTimes) {
                     tr->coolingTimes = 0;
-                    tr->temperature = (tr->last_temp + tr->finalTemp) / 2.0;
+                    tr->temperature = tr->startTemp;
                     // tr->temperature = (tr->last_temp * 0.5 > tr->finalTemp) ? (tr->last_temp * 0.5) : tr->last_temp;
                     tr->last_temp = tr->temperature;
 
