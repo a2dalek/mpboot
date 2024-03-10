@@ -1996,7 +1996,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             _evaluateParsimony(tr, pr, p->next->next, PLL_FALSE, perSiteScores);
 
         //		if(globalParam->gbo_replicates > 0 && perSiteScores){
-        if (perSiteScores && !tr->usingSA) {
+        if (perSiteScores) {
             // If UFBoot is enabled ...
             pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
         }
@@ -2028,7 +2028,18 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 int tmpBestParsimony = tr->bestParsimony;
                 int tmpMP = mp;
                 int delta = tmpBestParsimony - tmpMP;
-                double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
+                double tmp;
+                
+                if (tr->sampars) {
+                    tmp = double(delta) / (tr->temperature);
+                } else if (tr->lvb) {
+                    // std::cout << tr->hamming_score << "\n";
+                    tmp = double(tr->hamming_score) / tmpMP - double(tr->hamming_score) / tr->bestParsimony;
+                    tmp = tmp / tr->temperature;
+                } else {
+                    tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
+                }
+
                 tr->sumOfDelta += abs(delta);
                 tr->numOfDelta++;
                 // cout << tmp << " " << delta << "\n";
@@ -2036,11 +2047,13 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 
                 // std::cout << std::setprecision(23) << tmp << " " << tr->temperature << " " << probability << std::endl;
                 if (random_double() <= probability) {
+                    tr->cnt_acc++;
                     haveChange = true;
                     tr->insertNode = q;
                     tr->removeNode = p;
-                    std::cout << std::setprecision(23) << " " << tmpBestParsimony << " " << mp << " " << probability << std::endl;
-                } 
+                } else {
+                    tr->cnt_rej++;
+                }
             }
         } else {
             if (mp > tr->bestParsimony) {
@@ -2127,7 +2140,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             _evaluateParsimony(tr, pr, p->next->next, PLL_FALSE, perSiteScores);
 
         //		if(globalParam->gbo_replicates > 0 && perSiteScores){
-        if (perSiteScores && !tr->usingSA) {
+        if (perSiteScores) {
             // If UFBoot is enabled ...
             pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
         }
@@ -2262,7 +2275,7 @@ static int rearrangeParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
     unsigned int mp = _evaluateParsimony(
         tr, pr, p, PLL_FALSE, perSiteScores); // Diep: This is VERY important to
                                               // make sure SPR is accurate*****
-    if (perSiteScores && !tr->usingSA) {
+    if (perSiteScores) {
         // If UFBoot is enabled ...
         pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
     }
@@ -3187,6 +3200,14 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                             int maxtrav, IQTree *_iqtree) {
     int perSiteScores = globalParam->gbo_replicates > 0;
 
+    if (tr->lvb && tr->hamming_score == 0) {
+        
+        for (int i=0; i < _iqtree->getAlnNPattern(); i++) {
+            tr->hamming_score += pllCalcMinParsScorePattern(tr, pr->partitionData[0]->dataType, i);
+        }
+
+    }
+
     iqtree = _iqtree; // update pointer to IQTree
 
     if (globalParam->ratchet_iter >= 0 &&
@@ -3359,6 +3380,8 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 tr->coolingTimes = 0;
                 tr->last_temp = tr->startTemp;
                 tr->temperature = tr->startTemp;
+                tr->cnt_acc = 0;
+                tr->cnt_rej = 0;
 
                 switch (tr->coolingSchedule)
                 {
@@ -3394,7 +3417,11 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                     randomMP = tr->bestParsimony;
                 }
 
-                if (haveBetter) tr->coolingTimes++;
+                // if (haveBetter) 
+                tr->coolingTimes++;
+
+                tr->cnt_acc = 0;
+                tr->cnt_rej = 0;
 
                 switch (tr->coolingSchedule)
                 {
@@ -3422,7 +3449,8 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 
                 if (tr->coolingTimes == tr->maxCoolingTimes) {
                     tr->coolingTimes = 0;
-                    tr->temperature = (tr->last_temp * 0.5 > tr->finalTemp) ? (tr->last_temp * 0.5) : tr->last_temp;
+                    tr->temperature = (tr->last_temp + tr->finalTemp) / 2.0;
+                    // tr->temperature = (tr->last_temp * 0.5 > tr->finalTemp) ? (tr->last_temp * 0.5) : tr->last_temp;
                     tr->last_temp = tr->temperature;
 
                     switch (tr->coolingSchedule)
@@ -3445,54 +3473,55 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 }
             }
 
-            tr->coolingTimes++;
+            // tr->coolingTimes++;
 
-            switch (tr->coolingSchedule) {
-                case LINEAR_ADDITIVE_COOLING_PLL: {
-                    tr->temperature -= tr->coolingAmount;
-                    break;
-                }
+            // switch (tr->coolingSchedule) {
+            //     case LINEAR_ADDITIVE_COOLING_PLL: {
+            //         tr->temperature -= tr->coolingAmount;
+            //         break;
+            //     }
 
-                case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
-                    tr->temperature = tr->last_temp / (1 + tr->coolingAmount * tr->coolingTimes);
-                    break;
-                }
+            //     case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+            //         tr->temperature = tr->last_temp / (1 + tr->coolingAmount * tr->coolingTimes);
+            //         break;
+            //     }
 
-                case EXPONENTIAL_ADDITIVE_COOLING_PLL: {
-                    double deltaTemp = tr->last_temp - tr->finalTemp;
-                    tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
-                    break;
-                }
+            //     case EXPONENTIAL_ADDITIVE_COOLING_PLL: {
+            //         double deltaTemp = tr->last_temp - tr->finalTemp;
+            //         tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+            //         break;
+            //     }
 
-                case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
-                    tr->temperature *= tr->coolingAmount;
-                    break;
-                }
-            }
+            //     case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+            //         tr->temperature *= tr->coolingAmount;
+            //         break;
+            //     }
+            // }
             
-            if (tr->coolingTimes == tr->maxCoolingTimes) {
-                tr->coolingTimes = 0;
-                tr->temperature = (tr->last_temp * 0.5 > tr->finalTemp) ? (tr->last_temp * 0.5) : tr->last_temp;
-                tr->last_temp = tr->temperature;
+            // if (tr->coolingTimes == tr->maxCoolingTimes) {
+            //     tr->coolingTimes = 0;
+            //     // tr->temperature = (tr->last_temp * 0.5 > tr->finalTemp) ? (tr->last_temp * 0.5) : tr->last_temp;
+            //     tr->temperature = (tr->last_temp + tr->finalTemp) / 2.0;
+            //     tr->last_temp = tr->temperature;
 
-                switch (tr->coolingSchedule)
-                {
-                    case LINEAR_ADDITIVE_COOLING_PLL: {
-                        tr->coolingAmount = (tr->last_temp - tr->finalTemp) / tr->maxCoolingTimes;
-                        break;
-                    }
+            //     switch (tr->coolingSchedule)
+            //     {
+            //         case LINEAR_ADDITIVE_COOLING_PLL: {
+            //             tr->coolingAmount = (tr->last_temp - tr->finalTemp) / tr->maxCoolingTimes;
+            //             break;
+            //         }
 
-                    case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
-                        tr->coolingAmount = ((tr->last_temp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
-                        break;
-                    }
+            //         case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+            //             tr->coolingAmount = ((tr->last_temp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
+            //             break;
+            //         }
 
-                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
-                        tr->coolingAmount = pow(tr->finalTemp / tr->last_temp, 1.0 / tr->maxCoolingTimes);
-                        break;
-                    }
-                }
-            }
+            //         case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+            //             tr->coolingAmount = pow(tr->finalTemp / tr->last_temp, 1.0 / tr->maxCoolingTimes);
+            //             break;
+            //         }
+            //     }
+            // }
             // std::cout<<tr->cnt_tree<<std::endl;
         } while (randomMP < startMP);
         
