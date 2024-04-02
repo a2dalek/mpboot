@@ -2045,7 +2045,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 double probability = exp(tmp);
                 // std::cout << std::setprecision(23) << tmp << " " << tr->temperature << " " << probability << std::endl;
                 if (random_double() <= probability) {
-                    // std::cout << "best global = " << bestScoreGlobal << ", best in iter = " << tr->bestParsimony << ", cur = " << mp << ", " << ", delta = " << delta <<  std::setprecision(10) << ", pro = " << probability * 100 << ", temp = " << tr->temperature << "\n";
+                    std::cout << "best global = " << bestScoreGlobal << ", best in iter = " << tr->bestParsimony << ", cur = " << mp << ", " << ", delta = " << delta <<  std::setprecision(10) << ", pro = " << probability * 100 << ", temp = " << tr->temperature << "\n";
                     tr->cnt_acc++;
                     haveChange = true;
                     tr->insertNode = q;
