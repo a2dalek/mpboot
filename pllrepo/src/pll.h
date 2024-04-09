@@ -356,6 +356,9 @@ typedef struct {
     double finalTemp;
     pllBoolean plusSA;
     pllBoolean pureSA;
+    pllBoolean sampars;
+    pllBoolean lvb;
+    pllBoolean autoSA;
 } pllInstanceAttr;
 
 /** @brief Stores the recomputation-state of likelihood vectors  */

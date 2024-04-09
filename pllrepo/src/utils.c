@@ -1949,6 +1949,9 @@ pllInstance * pllCreateInstance (pllInstanceAttr * attr)
   tr->finalTemp = attr->finalTemp;
   tr->plusSA = attr->plusSA;
   tr->pureSA = attr->pureSA;
+  tr->autoSA = attr->autoSA;
+  tr->sampars = attr->sampars;
+  tr->lvb = attr->lvb;
 
   /* Lock the slave processors at this point */
 #ifdef _FINE_GRAIN_MPI

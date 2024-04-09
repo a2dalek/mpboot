@@ -2028,7 +2028,16 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 }
             } else if (tr->temperature >= tr->finalTemp && !haveBetter) {
                 int delta = bestScoreGlobal - mp;
-                double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);;
+                double tmp;
+                
+                if (tr->sampars) {
+                    tmp = double(delta) / (tr->temperature);
+                } else if (tr->lvb) {
+                    tmp = double(tr->hamming_score) / mp - double(tr->hamming_score) / bestScoreGlobal;
+                    tmp = tmp / tr->temperature;
+                } else {
+                    tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);
+                }
 
                 tr->sumOfDelta += abs(delta);
                 tr->numOfDelta++;
@@ -2036,8 +2045,6 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 double probability = exp(tmp);
                 // std::cout << std::setprecision(23) << tmp << " " << tr->temperature << " " << probability << std::endl;
                 if (random_double() <= probability) {
-                    // std::cout << "best global = " << bestScoreGlobal << ", best in iter = " << tr->bestParsimony << ", cur = " << mp << ", " << ", delta = " << delta <<  std::setprecision(10) << ", pro = " << probability * 100 << ", temp = " << tr->temperature << "\n";
-                    tr->cnt_acc++;
                     haveChange = true;
                     tr->insertNode = q;
                     tr->removeNode = p;
@@ -3201,6 +3208,14 @@ void _pllComputeRandomizedStepwiseAdditionParsimonyTree(
 int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                             int maxtrav, IQTree *_iqtree) {
     int perSiteScores = globalParam->gbo_replicates > 0;
+
+    if (tr->lvb && tr->hamming_score == 0) {
+        
+        for (int i=0; i < _iqtree->getAlnNPattern(); i++) {
+            tr->hamming_score += pllCalcMinParsScorePattern(tr, pr->partitionData[0]->dataType, i);
+        }
+
+    }
 
     iqtree = _iqtree; // update pointer to IQTree
 
