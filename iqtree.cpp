@@ -386,7 +386,12 @@ void IQTree::initTopologyByPLLRandomAdition(Params &params){
 	tmpAttr.saveMemory   = PLL_FALSE;
 	tmpAttr.useRecom     = PLL_FALSE;
 	tmpAttr.randomNumberSeed = params.ran_seed;
-
+  tmpAttr.coolingSchedule = static_cast<CoolingSchedulePll>(params.coolingSchedule);
+  tmpAttr.maxCoolingTimes = params.maxCoolingTimes;
+  tmpAttr.startTemp = params.start_temp;
+  tmpAttr.finalTemp = params.final_temp;
+  tmpAttr.plusSA = params.plusSA;
+  tmpAttr.pureSA = params.pureSA;
 #ifdef _OPENMP
     tmpAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
 #else
@@ -568,6 +573,12 @@ void IQTree::initializePLL(Params &params) {
   pllAttr.saveMemory = PLL_FALSE;
   pllAttr.useRecom = PLL_FALSE;
   pllAttr.randomNumberSeed = params.ran_seed;
+  pllAttr.coolingSchedule = static_cast<CoolingSchedulePll>(params.coolingSchedule);
+  pllAttr.maxCoolingTimes = params.maxCoolingTimes;
+  pllAttr.startTemp = params.start_temp;
+  pllAttr.finalTemp = params.final_temp;
+  pllAttr.plusSA = params.plusSA;
+  pllAttr.pureSA = params.pureSA;
 #ifdef _OPENMP
   pllAttr.numberOfThreads =
       params.num_threads; /* This only affects the pthreads version */
@@ -1702,6 +1713,8 @@ double IQTree::doTreeSearch() {
   double cur_correlation = 0.0;
   int ratchet_iter_count = 0;
   assert(pllInst != NULL);
+
+  params->usingSA = false;
   /*====================================================
    * MAIN LOOP OF THE IQ-TREE ALGORITHM
    *====================================================*/
@@ -2278,9 +2291,17 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
 
       if (params->tbr_alternate != -1) {
         if (cnt_tbr_spr_alternate > 0) {
+            pllInst->pureSA = params->pureSA;
+            if (on_ratchet_hclimb1) {
+              pllInst->pureSA = false;
+            }
             pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
         } else {
+            pllInst->pureSA = params->pureSA;
+            if (on_ratchet_hclimb1) {
+              pllInst->pureSA = false;
+            }
             pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
         }
@@ -2302,9 +2323,17 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
         }
         // cout << "cnt: " << cntItersNotImproved << '\n';
       } else if (params->tbr_pars == true) {
+        pllInst->pureSA = params->pureSA;
+        if (on_ratchet_hclimb1) {
+          pllInst->pureSA = false;
+        }
         pllOptimizeTbrParsimony(pllInst, pllPartitions, params->tbr_mintrav,
                                 params->tbr_maxtrav, this);
       } else {
+        pllInst->pureSA = params->pureSA;
+        if (on_ratchet_hclimb1) {
+          pllInst->pureSA = false;
+        }
         pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
       }
@@ -2692,6 +2721,9 @@ void IQTree::optimizeBootTrees() {
   save_all_trees = 0;
   string saved_tree = getTreeString();
   saved_aln_on_opt_btree = aln;
+  params->plusSA = false;
+  params->pureSA = false;
+  params->usingSA = false;
 
   if (params->opt_btree_spr > 0) {
     params->spr_parsimony = true;

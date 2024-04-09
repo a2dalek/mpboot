@@ -7,6 +7,7 @@
 #include "sprparsimony.h"
 #include "parstree.h"
 #include <string>
+#include <algorithm>
 /**
  * PLL (version 1.0.0) a software library for phylogenetic inference
  * Copyright (C) 2013 Tomas Flouri and Alexandros Stamatakis
@@ -137,6 +138,10 @@ extern parsimonyNumber *pllCostMatrix;    // Diep: For weighted version
 extern int pllCostNstates;                // Diep: For weighted version
 extern parsimonyNumber *vectorCostMatrix; // BQM: vectorized cost matrix
 parsimonyNumber highest_cost;
+
+static bool haveChange = false;
+static bool haveBetter = false;
+static int bestScoreGlobal = INT_MAX;
 
 //(if needed) split the parsimony vector into several segments to avoid overflow
 // when calc rell based on vec8us
@@ -1998,17 +2003,70 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             pllSaveCurrentTreeSprParsimony(tr, pr, mp); // run UFBoot
         }
 
-        if (mp < tr->bestParsimony)
-            bestTreeScoreHits = 1;
-        else if (mp == tr->bestParsimony)
-            bestTreeScoreHits++;
+        if (tr->usingSA) {
+            if (mp < tr->bestParsimony) {
+                pllTreeToNewick(tr->best_tree_string, tr, pr,
+                    tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                    PLL_SUMMARIZE_LH, 0, 0);
+                tr->bestParsimony = mp;
+                bestTreeScoreHits = 1;
+                haveChange = true;
+                haveBetter = true;
+                tr->insertNode = q;
+                tr->removeNode = p;
 
-        if ((mp < tr->bestParsimony) ||
-            ((mp == tr->bestParsimony) &&
-             (random_double() <= 1.0 / bestTreeScoreHits))) {
-            tr->bestParsimony = mp;
-            tr->insertNode = q;
-            tr->removeNode = p;
+                if (mp < bestScoreGlobal) {
+                    tr->sumOfDelta += (bestScoreGlobal - mp) * tr->numOfDelta;
+                    bestScoreGlobal = mp;
+                }
+            } else if (mp == tr->bestParsimony) {
+                bestTreeScoreHits++;
+                if (random_double() < (double)1/bestTreeScoreHits) {
+                    haveChange = true;
+                    tr->insertNode = q;
+                    tr->removeNode = p;
+                }
+            } else if (tr->temperature >= tr->finalTemp && !haveBetter) {
+                int delta = bestScoreGlobal - mp;
+                double tmp = double(delta)/double(tr->sumOfDelta / tr->numOfDelta * tr->temperature);;
+
+                tr->sumOfDelta += abs(delta);
+                tr->numOfDelta++;
+
+                double probability = exp(tmp);
+                // std::cout << std::setprecision(23) << tmp << " " << tr->temperature << " " << probability << std::endl;
+                if (random_double() <= probability) {
+                    // std::cout << "best global = " << bestScoreGlobal << ", best in iter = " << tr->bestParsimony << ", cur = " << mp << ", " << ", delta = " << delta <<  std::setprecision(10) << ", pro = " << probability * 100 << ", temp = " << tr->temperature << "\n";
+                    tr->cnt_acc++;
+                    haveChange = true;
+                    tr->insertNode = q;
+                    tr->removeNode = p;
+                } else {
+                    tr->cnt_rej++;
+                }
+            }
+        } else {
+            if (mp > tr->bestParsimony) {
+                tr->numOfDelta++;
+                tr->sumOfDelta += mp - tr->bestParsimony;
+            }
+            if (mp < tr->bestParsimony)
+                bestTreeScoreHits = 1;
+            else if (mp == tr->bestParsimony)
+                bestTreeScoreHits++;
+
+            if ((mp < tr->bestParsimony) ||
+                ((mp == tr->bestParsimony) &&
+                (random_double() <= 1.0 / bestTreeScoreHits))) {
+                    tr->bestParsimony = mp;
+                    tr->insertNode = q;
+                    tr->removeNode = p;
+                
+                    if (mp < bestScoreGlobal) {
+                        tr->sumOfDelta += (bestScoreGlobal - mp) * tr->numOfDelta;
+                        bestScoreGlobal = mp;
+                    }
+            }
         }
 
         if (saveBranches)
@@ -2094,6 +2152,11 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
             tr->insertNode = q;
             tr->removeNode = p;
             found_better = true;
+
+            if (mp < bestScoreGlobal) {
+                tr->sumOfDelta += (bestScoreGlobal - mp) * tr->numOfDelta;
+                bestScoreGlobal = mp;
+            }
         }
 
         if (saveBranches)
@@ -3174,6 +3237,19 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     // cout << "STARTING SCORE: " << tr->bestParsimony << '\n';
     assert(-iqtree->curScore == tr->bestParsimony);
 
+    if (bestScoreGlobal > -_iqtree->bestScore) {
+        if (bestScoreGlobal != INT_MAX) {
+            tr->sumOfDelta += (bestScoreGlobal - (-_iqtree->bestScore)) * tr->numOfDelta;
+        }
+        bestScoreGlobal = -_iqtree->bestScore;
+    }
+    if (bestScoreGlobal > tr->bestParsimony) {
+        if (bestScoreGlobal != INT_MAX) {
+            tr->sumOfDelta += (bestScoreGlobal - tr->bestParsimony) * tr->numOfDelta;
+        }
+        bestScoreGlobal = tr->bestParsimony;
+    }
+
     //	cout << "\ttr->bestParsimony (initial tree) = " << tr->bestParsimony <<
     // endl;
     /*
@@ -3190,32 +3266,154 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     unsigned int bestIterationScoreHits = 1;
     randomMP = tr->bestParsimony;
     tr->ntips = tr->mxtips;
-    do {
-        startMP = randomMP;
-        nodeRectifierPars(tr);
-        for (i = 2; i <= tr->mxtips + tr->mxtips - 2; i++) {
-            //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
-            //			i = perm[j];
-            tr->insertNode = NULL;
-            tr->removeNode = NULL;
-            bestTreeScoreHits = 1;
 
-            rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                               PLL_FALSE, perSiteScores);
-            if (tr->bestParsimony == randomMP)
-                bestIterationScoreHits++;
-            if (tr->bestParsimony < randomMP)
-                bestIterationScoreHits = 1;
-            if (((tr->bestParsimony < randomMP) ||
-                 ((tr->bestParsimony == randomMP) &&
-                  (random_double() <= 1.0 / bestIterationScoreHits))) &&
-                tr->removeNode && tr->insertNode) {
-                restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
-                randomMP = tr->bestParsimony;
+    if (tr->pureSA) {
+        if (tr->pureSA) tr->usingSA = true;
+        
+        bestIterationScoreHits = 1;
+        tr->numOfDelta = 1;
+        tr->sumOfDelta = tr->bestParsimony/200;
+
+        do {
+            pllTreeToNewick(tr->best_tree_string, tr, pr,
+                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
+                      PLL_SUMMARIZE_LH, 0, 0);
+
+            startMP = randomMP;
+            nodeRectifierPars(tr);
+
+            if (tr->temperature == -1.0) {
+                tr->maxCoolingTimes = (tr->mxtips + tr->mxtips - 2) * 60;
+                tr->coolingTimes = 0;
+                tr->last_temp = tr->startTemp;
+                tr->temperature = tr->startTemp;
+                tr->cnt_acc = 0;
+                tr->cnt_rej = 0;
+
+                switch (tr->coolingSchedule)
+                {
+                    case LINEAR_ADDITIVE_COOLING_PLL: {
+                        tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
+                        break;
+                    }
+
+                    case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+                        tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
+                        break;
+                    }
+
+                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+                        tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
+                        break;
+                    }
+                }
             }
-        }
-    } while (randomMP < startMP);
 
+            for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                haveChange = false;
+                haveBetter = false;
+                tr->insertNode = NULL;
+                tr->removeNode = NULL;
+                bestTreeScoreHits = 1;
+
+                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
+                               PLL_FALSE, perSiteScores);
+
+                if (haveChange) {
+                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
+                    randomMP = tr->bestParsimony;
+                }
+
+                tr->coolingTimes++;
+
+                switch (tr->coolingSchedule)
+                {
+                    case LINEAR_ADDITIVE_COOLING_PLL: {
+                        tr->temperature -= tr->coolingAmount;
+                        break;
+                    }
+
+                    case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+                        tr->temperature = tr->last_temp / (1 + tr->coolingAmount * tr->coolingTimes);
+                        break;
+                    }
+
+                    case EXPONENTIAL_ADDITIVE_COOLING_PLL: {
+                        double deltaTemp = tr->last_temp - tr->finalTemp;
+                        tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+                        break;
+                    }
+
+                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+                        tr->temperature *= tr->coolingAmount;
+                        break;
+                    }
+                }
+                
+                if (tr->coolingTimes == tr->maxCoolingTimes) {
+                    tr->coolingTimes = 0;
+                    tr->temperature = tr->startTemp;
+                    tr->last_temp = tr->temperature;
+
+                    switch (tr->coolingSchedule)
+                    {
+                        case LINEAR_ADDITIVE_COOLING_PLL: {
+                            tr->coolingAmount = (tr->last_temp - tr->finalTemp) / tr->maxCoolingTimes;
+                            break;
+                        }
+
+                        case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+                            tr->coolingAmount = ((tr->last_temp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
+                            break;
+                        }
+
+                        case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+                            tr->coolingAmount = pow(tr->finalTemp / tr->last_temp, 1.0 / tr->maxCoolingTimes);
+                            break;
+                        }
+                    }
+                }
+            }
+        } while (randomMP < startMP);
+        
+        // Reverse to best tree topology
+        pllNewickTree *tmpTree = pllNewickParseString(tr->best_tree_string);
+        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
+        pllNewickParseDestroy(&tmpTree);
+
+        if (tr->bestParsimony < iqtree->globalScore) {
+            iqtree->cntItersNotImproved = 0;
+            iqtree->globalScore = tr->bestParsimony;
+        }
+        return tr->bestParsimony;
+    } else {
+        do {
+            startMP = randomMP;
+            nodeRectifierPars(tr);
+            tr->cnt_tree = 0;
+            for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+                //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
+                //			i = perm[j];
+                tr->insertNode = NULL;
+                tr->removeNode = NULL;
+                bestTreeScoreHits = 1;
+
+                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
+                               PLL_FALSE, perSiteScores);
+                if (tr->bestParsimony == randomMP)
+                    bestIterationScoreHits++;
+                if (tr->bestParsimony < randomMP)
+                    bestIterationScoreHits = 1;
+                if (((tr->bestParsimony < randomMP) ||
+                    ((tr->bestParsimony == randomMP) &&
+                    (random_double() <= 1.0 / bestIterationScoreHits))) &&
+                    tr->removeNode && tr->insertNode) {
+                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
+                    randomMP = tr->bestParsimony;
+                }
+            }
+        } while (randomMP < startMP);
+    }
     return startMP;
 }
 
