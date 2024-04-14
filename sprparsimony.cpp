@@ -141,6 +141,7 @@ parsimonyNumber highest_cost;
 
 static bool haveChange = false;
 static bool haveBetter = false;
+static bool haveBetterGlobal = false;
 static int bestScoreGlobal = INT_MAX;
 
 //(if needed) split the parsimony vector into several segments to avoid overflow
@@ -2018,6 +2019,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 if (mp < bestScoreGlobal) {
                     tr->sumOfDelta += (bestScoreGlobal - mp) * tr->numOfDelta;
                     bestScoreGlobal = mp;
+                    haveBetterGlobal = true;
                 }
             } else if (mp == tr->bestParsimony) {
                 bestTreeScoreHits++;
@@ -2045,6 +2047,7 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 double probability = exp(tmp);
                 // std::cout << std::setprecision(23) << tmp << " " << tr->temperature << " " << probability << std::endl;
                 if (random_double() <= probability) {
+                    std::cout << std::setprecision(8) << probability << " " << tr->temperature << " " << delta << "\n";
                     haveChange = true;
                     tr->insertNode = q;
                     tr->removeNode = p;
@@ -3302,7 +3305,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
             nodeRectifierPars(tr);
 
             if (tr->temperature == -1.0) {
-                tr->maxCoolingTimes = (tr->mxtips + tr->mxtips - 2) * 60;
+                tr->maxCoolingTimes = (tr->mxtips + tr->mxtips - 2) * ((tr->mxtips + 99) / 100 * 100) * 3;
                 tr->coolingTimes = 0;
                 tr->last_temp = tr->startTemp;
                 tr->temperature = tr->startTemp;
@@ -3331,6 +3334,7 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
             for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
                 haveChange = false;
                 haveBetter = false;
+                haveBetterGlobal = false;
                 tr->insertNode = NULL;
                 tr->removeNode = NULL;
                 bestTreeScoreHits = 1;
@@ -3369,7 +3373,8 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                     }
                 }
                 
-                if (tr->coolingTimes == tr->maxCoolingTimes) {
+                // if (tr->coolingTimes == tr->maxCoolingTimes) {
+                if (haveBetterGlobal) {
                     tr->coolingTimes = 0;
                     tr->temperature = tr->startTemp;
                     tr->last_temp = tr->temperature;
@@ -3391,6 +3396,10 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                             break;
                         }
                     }
+                }
+
+                if (tr->temperature < tr->finalTemp) {
+                    tr->temperature = tr->finalTemp;
                 }
             }
         } while (randomMP < startMP);
