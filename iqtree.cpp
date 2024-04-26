@@ -2305,8 +2305,10 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
                                 params->tbr_maxtrav, this);
         } else {
             pllInst->pureSA = params->pureSA;
+            pllInst->plusSA = params->plusSA;
             if (on_ratchet_hclimb1) {
               pllInst->pureSA = false;
+              pllInst->plusSA = false;
             }
             pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
@@ -2337,8 +2339,10 @@ string IQTree::doNNISearch(int &nniCount, int &nniSteps) {
                                 params->tbr_maxtrav, this);
       } else {
         pllInst->pureSA = params->pureSA;
+        pllInst->plusSA = params->plusSA;
         if (on_ratchet_hclimb1) {
           pllInst->pureSA = false;
+          pllInst->plusSA = false;
         }
         pllOptimizeSprParsimony(pllInst, pllPartitions, params->spr_mintrav,
                                 max_spr_rad, this);
