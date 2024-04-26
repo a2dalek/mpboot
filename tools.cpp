@@ -884,13 +884,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.coolingSchedule = LINEAR_ADDITIVE_COOLING;
     params.start_temp = 0.025;
     params.final_temp = 0.0025;
-    params.maxCoolingTimes = 40;
-    params.acceptProbility = 0.075;
     params.plusSA = false;
     params.pureSA = false;
     params.sampars = false;
     params.lvb = false;
-    params.autoSA = false;
 
     if (params.nni5) {
         params.nni_type = NNI5;

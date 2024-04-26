@@ -3202,35 +3202,35 @@ void _pllComputeRandomizedStepwiseAdditionParsimonyTree(
     //	cout << "Done free..." << endl;
 }
 
-void decreaseTemp(pllInstance *tr) {
-    tr->coolingTimes++;
+void decreaseTemp(pllInstance *tr, int times = 1) {
+    for (int i = 0; i < times; i++) {
+        switch (tr->coolingSchedule)
+        {
+            case LINEAR_ADDITIVE_COOLING_PLL: {
+                tr->temperature -= tr->coolingAmount;
+                break;
+            }
 
-    switch (tr->coolingSchedule)
-    {
-        case LINEAR_ADDITIVE_COOLING_PLL: {
-            tr->temperature -= tr->coolingAmount;
-            break;
+            case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+                tr->temperature = tr->start_temp / (1 + tr->coolingAmount * tr->coolingTimes);
+                break;
+            }
+
+            case EXPONENTIAL_ADDITIVE_COOLING_PLL: {
+                double deltaTemp = tr->startTemp - tr->finalTemp;
+                tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(-2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
+                break;
+            }
+
+            case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+                tr->temperature *= tr->coolingAmount;
+                break;
+            }
         }
 
-        case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
-            tr->temperature = tr->last_temp / (1 + tr->coolingAmount * tr->coolingTimes);
-            break;
+        if (tr->temperature < tr->finalTemp) {
+            tr->temperature = tr->finalTemp;
         }
-
-        case EXPONENTIAL_ADDITIVE_COOLING_PLL: {
-            double deltaTemp = tr->startTemp - tr->finalTemp;
-            tr->temperature = tr->finalTemp + deltaTemp/(1.0 + exp(-2.0*log(deltaTemp)/tr->maxCoolingTimes*(tr->coolingTimes - 0.5*tr->maxCoolingTimes))); 
-            break;
-        }
-
-        case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
-            tr->temperature *= tr->coolingAmount;
-            break;
-        }
-    }
-
-    if (tr->temperature < tr->finalTemp) {
-        tr->temperature = tr->finalTemp;
     }
 }
 
@@ -3315,7 +3315,6 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     unsigned int bestIterationScoreHits = 1;
     randomMP = tr->bestParsimony;
     tr->ntips = tr->mxtips;
-    bool is_new = false;
 
     if (tr->pureSA) {
         if (tr->pureSA) tr->usingSA = true;
@@ -3378,16 +3377,15 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                 if (haveBetterGlobal) {
                     tr->coolingTimes = 0;
                     tr->temperature = tr->startTemp;
-                    is_new = true;
                 }
 
                 
             }
         } while (randomMP < startMP);
 
-        decreaseTemp(tr);
-        if (is_new) {
-            decreaseTemp(tr);
+        tr->coolingTimes++;
+        if (tr->coolingTimes == 1 || tr->coolingTimes % 20 == 1) {
+            decreaseTemp(tr, 20);
         }
         
         // Reverse to best tree topology
