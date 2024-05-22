@@ -354,11 +354,11 @@ typedef struct {
     int maxCoolingTimes; 
     double startTemp;
     double finalTemp;
-    pllBoolean plusSA;
+
     pllBoolean pureSA;
+    pllBoolean printAcceptTree;
     pllBoolean sampars;
     pllBoolean lvb;
-    pllBoolean autoSA;
 } pllInstanceAttr;
 
 /** @brief Stores the recomputation-state of likelihood vectors  */
@@ -1398,11 +1398,10 @@ typedef struct {
     int cnt_acc;
     int cnt_rej;
     pllBoolean usingSA;
-    pllBoolean plusSA;
     pllBoolean pureSA;
+    pllBoolean printAcceptTree;
     pllBoolean sampars;
     pllBoolean lvb;
-    pllBoolean autoSA;
     unsigned long long sumOfDelta;
     unsigned long long numOfDelta;
     unsigned long long cnt_tree;

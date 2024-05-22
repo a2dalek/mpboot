@@ -1942,14 +1942,12 @@ pllInstance * pllCreateInstance (pllInstanceAttr * attr)
 
   tr->numberOfThreads   = attr->numberOfThreads;
   tr->rearrangeHistory  = NULL;
-  tr->maxCoolingTimes = attr->maxCoolingTimes;
   tr->coolingSchedule = attr->coolingSchedule;
   tr->startTemp = attr->startTemp;
   tr->temperature = -1.0;
   tr->finalTemp = attr->finalTemp;
-  tr->plusSA = attr->plusSA;
   tr->pureSA = attr->pureSA;
-  tr->autoSA = attr->autoSA;
+  tr->printAcceptTree = attr->printAcceptTree;
   tr->sampars = attr->sampars;
   tr->lvb = attr->lvb;
 

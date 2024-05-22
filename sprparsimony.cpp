@@ -2045,9 +2045,15 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 tr->numOfDelta++;
 
                 double probability = exp(tmp);
-                // std::cout << std::setprecision(23) << tmp << " " << tr->temperature << " " << probability << std::endl;
                 if (random_double() <= probability) {
-                    // std::cout << std::setprecision(8) << probability << " " << tr->temperature << " " << " " << tr->sumOfDelta << " " << tr->numOfDelta << " " << delta << "\n";
+                    if (tr->printAcceptTree) {
+                        std::streamsize ss = std::cout.precision();
+                        std::cout.precision (8);
+                        std::cout << "Accept worse tree with probability = " << probability 
+                                  << ", current temperature = " << tr->temperature 
+                                  << ", delta = " << delta << "\n";
+                        std::cout.precision (ss);
+                    }
                     haveChange = true;
                     tr->insertNode = q;
                     tr->removeNode = p;
@@ -2056,8 +2062,6 @@ static void testInsertParsimony(pllInstance *tr, partitionList *pr, nodeptr p,
                 }
             }
         } else {
-            
-
             if (mp > bestScoreGlobal) {
                 tr->numOfDelta++;
                 tr->sumOfDelta += mp - bestScoreGlobal;
@@ -3207,14 +3211,9 @@ void _pllComputeRandomizedStepwiseAdditionParsimonyTree(
 void decreaseTemp(pllInstance *tr, int times = 1) {
     for (int i = 0; i < times; i++) {
         switch (tr->coolingSchedule)
-        {
-            case LINEAR_ADDITIVE_COOLING_PLL: {
-                tr->temperature -= tr->coolingAmount;
-                break;
-            }
-
-            case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
-                tr->temperature = tr->startTemp / (1 + tr->coolingAmount * tr->coolingTimes);
+        {   
+            case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+                tr->temperature *= tr->coolingAmount;
                 break;
             }
 
@@ -3224,14 +3223,74 @@ void decreaseTemp(pllInstance *tr, int times = 1) {
                 break;
             }
 
-            case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
-                tr->temperature *= tr->coolingAmount;
+            case LINEAR_ADDITIVE_COOLING_PLL: {
+                tr->temperature -= tr->coolingAmount;
+                break;
+            }
+
+            case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+                tr->temperature = tr->startTemp / (1 + tr->coolingAmount * tr->coolingTimes);
                 break;
             }
         }
 
         if (tr->temperature < tr->finalTemp) {
             tr->temperature = tr->finalTemp;
+        }
+    }
+}
+
+void InitSA(pllInstance *tr) {
+    tr->maxCoolingTimes = (tr->mxtips + 99) / 100 * 100 + 1;
+    tr->coolingTimes = 100;
+    tr->last_temp = tr->startTemp;
+    tr->temperature = tr->startTemp;
+
+    bool use_default_temp = false;
+    if (tr->finalTemp <= 0 || tr->startTemp <= 0) {
+        std::cout << "Temperature can not smaller than or equal to 0, use default temperature\n";
+        use_default_temp = true;
+    } 
+
+    if (tr->startTemp <= tr->finalTemp) {
+        std::cout << "Start temp can not be smaller than or equal to final temp, use default temperature\n";
+        use_default_temp = true;
+    }
+
+    switch (tr->coolingSchedule)
+    {
+        case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
+            if (use_default_temp) {
+                tr->startTemp = 0.005;
+                tr->finalTemp = 0.00025;
+            }
+            tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
+            break;
+        }
+
+        case EXPONENTIAL_ADDITIVE_COOLING_PLL: {
+            if (use_default_temp) {
+                tr->startTemp = 0.002;
+                tr->finalTemp = 0.00025;
+            }
+        }
+
+        case LINEAR_ADDITIVE_COOLING_PLL: {
+            if (use_default_temp) {
+                tr->startTemp = 0.003;
+                tr->finalTemp = 0.0005;
+            }
+            tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
+            break;
+        }
+
+        case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
+            if (use_default_temp) {
+                tr->startTemp = 0.0025;
+                tr->finalTemp = 0.0005;
+            }
+            tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
+            break;
         }
     }
 }
@@ -3246,14 +3305,6 @@ void decreaseTemp(pllInstance *tr, int times = 1) {
 int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                             int maxtrav, IQTree *_iqtree) {
     int perSiteScores = globalParam->gbo_replicates > 0;
-
-    if (tr->lvb && tr->hamming_score == 0) {
-        
-        for (int i=0; i < _iqtree->getAlnNPattern(); i++) {
-            tr->hamming_score += pllCalcMinParsScorePattern(tr, pr->partitionData[0]->dataType, i);
-        }
-
-    }
 
     iqtree = _iqtree; // update pointer to IQTree
 
@@ -3294,13 +3345,6 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     // cout << "STARTING SCORE: " << tr->bestParsimony << '\n';
     assert(-iqtree->curScore == tr->bestParsimony);
 
-    if (bestScoreGlobal > -_iqtree->bestScore) {
-        bestScoreGlobal = -_iqtree->bestScore;
-    }
-    if (bestScoreGlobal > tr->bestParsimony) {
-        bestScoreGlobal = tr->bestParsimony;
-    }
-
     //	cout << "\ttr->bestParsimony (initial tree) = " << tr->bestParsimony <<
     // endl;
     /*
@@ -3318,209 +3362,62 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
     randomMP = tr->bestParsimony;
     tr->ntips = tr->mxtips;
 
-    if (tr->plusSA) {
-        tr->usingSA = false;
-        tr->numOfDelta = 1;
-        tr->sumOfDelta = tr->bestParsimony - bestScoreGlobal;
-        
-        if (tr->temperature == -1.0) {
-            tr->maxCoolingTimes = (tr->mxtips + 99) / 100 * 100 + 1;
-            tr->coolingTimes = 100;
-            tr->last_temp = tr->startTemp;
-            tr->temperature = tr->startTemp;
-
-            switch (tr->coolingSchedule)
-            {
-                case LINEAR_ADDITIVE_COOLING_PLL: {
-                    tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
-                    break;
-                }
-
-                case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
-                    tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
-                    break;
-                }
-
-                case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
-                    tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
-                    break;
-                }
-            }
+    if (tr->pureSA) {
+        if (bestScoreGlobal > -_iqtree->bestScore) {
+            bestScoreGlobal = -_iqtree->bestScore;
+        }
+        if (bestScoreGlobal > tr->bestParsimony) {
+            bestScoreGlobal = tr->bestParsimony;
         }
 
-        do {
-            startMP = randomMP;
-            nodeRectifierPars(tr);
-            tr->cnt_tree = 0;
-            for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
-                //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
-                //			i = perm[j];
-                tr->insertNode = NULL;
-                tr->removeNode = NULL;
-                bestTreeScoreHits = 1;
-
-                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                               PLL_FALSE, perSiteScores);
-                if (tr->bestParsimony == randomMP)
-                    bestIterationScoreHits++;
-                if (tr->bestParsimony < randomMP)
-                    bestIterationScoreHits = 1;
-                if (((tr->bestParsimony < randomMP) ||
-                    ((tr->bestParsimony == randomMP) &&
-                    (random_double() <= 1.0 / bestIterationScoreHits))) &&
-                    tr->removeNode && tr->insertNode) {
-                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
-                    randomMP = tr->bestParsimony;
-                }
-            }
-        } while (randomMP < startMP);
+        tr->usingSA = true;
+        
+        tr->numOfDelta = 1;
+        tr->sumOfDelta = tr->bestParsimony - bestScoreGlobal;
 
         pllTreeToNewick(tr->best_tree_string, tr, pr,
                       tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
                       PLL_SUMMARIZE_LH, 0, 0);
-        
-        tr->usingSA = true;
-        do {
-            pllTreeToNewick(tr->best_tree_string, tr, pr,
-                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
-                      PLL_SUMMARIZE_LH, 0, 0);
 
-            startMP = randomMP;
-            nodeRectifierPars(tr);
+        if (tr->temperature == -1.0) {
+            InitSA(tr);
+        }
 
-            for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+        if (tr->lvb && tr->hamming_score == 0) {
+        for (int i=0; i < _iqtree->getAlnNPattern(); i++) {
+            tr->hamming_score += pllCalcMinParsScorePattern(tr, pr->partitionData[0]->dataType, i);
+        }
+    }
+    }
+
+    do {
+        startMP = randomMP;
+        nodeRectifierPars(tr);
+        tr->cnt_tree = 0;
+        for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
+            if (tr->usingSA) {
                 haveChange = false;
                 haveBetter = false;
                 haveBetterGlobal = false;
-                tr->insertNode = NULL;
-                tr->removeNode = NULL;
-                bestTreeScoreHits = 1;
+            }
+            tr->insertNode = NULL;
+            tr->removeNode = NULL;
+            bestTreeScoreHits = 1;
 
-                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                               PLL_FALSE, perSiteScores);
+            rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
+                            PLL_FALSE, perSiteScores);
 
+            if (tr->usingSA) {
                 if (haveChange) {
                     restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
                     randomMP = tr->bestParsimony;
                 }
                 
                 if (haveBetterGlobal) {
-                    tr->coolingTimes = 100;
+                    tr->coolingTimes = 0;
                     tr->temperature = tr->startTemp;
                 }
-            }
-        } while (randomMP < startMP);
-
-        tr->coolingTimes++;
-        if (tr->coolingTimes == 1 || tr->coolingTimes % 100 == 1) {
-            decreaseTemp(tr, 100);
-        }
-        
-        // Reverse to best tree topology
-        pllNewickTree *tmpTree = pllNewickParseString(tr->best_tree_string);
-        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
-        pllNewickParseDestroy(&tmpTree);
-
-        if (tr->bestParsimony < iqtree->globalScore) {
-            iqtree->cntItersNotImproved = 0;
-            iqtree->globalScore = tr->bestParsimony;
-        }
-
-        return tr->bestParsimony;
-    } else if (tr->pureSA) {
-        tr->usingSA = true;
-        
-        bestIterationScoreHits = 1;
-        tr->numOfDelta = 1;
-        tr->sumOfDelta = tr->bestParsimony - bestScoreGlobal;
-
-        do {
-            pllTreeToNewick(tr->best_tree_string, tr, pr,
-                      tr->start->back, PLL_FALSE, PLL_TRUE, 0, 0, 0,
-                      PLL_SUMMARIZE_LH, 0, 0);
-
-            startMP = randomMP;
-            nodeRectifierPars(tr);
-
-            if (tr->temperature == -1.0) {
-                tr->maxCoolingTimes = (tr->mxtips + 99) / 100 * 100 + 1;
-                tr->coolingTimes = 100;
-                tr->last_temp = tr->startTemp;
-                tr->temperature = tr->startTemp;
-
-                switch (tr->coolingSchedule)
-                {
-                    case LINEAR_ADDITIVE_COOLING_PLL: {
-                        tr->coolingAmount = (tr->startTemp - tr->finalTemp) / tr->maxCoolingTimes;
-                        break;
-                    }
-
-                    case LINEAR_MULTIPLICATIVE_COOLING_PLL: {
-                        tr->coolingAmount = ((tr->startTemp / tr->finalTemp) - 1.0) / tr->maxCoolingTimes;
-                        break;
-                    }
-
-                    case EXPONENTIAL_MULTIPLICATIVE_COOLING_PLL: {
-                        tr->coolingAmount = pow(tr->finalTemp / tr->startTemp, 1.0 / tr->maxCoolingTimes);
-                        break;
-                    }
-                }
-            }
-
-            for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
-                haveChange = false;
-                haveBetter = false;
-                haveBetterGlobal = false;
-                tr->insertNode = NULL;
-                tr->removeNode = NULL;
-                bestTreeScoreHits = 1;
-
-                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                               PLL_FALSE, perSiteScores);
-
-                if (haveChange) {
-                    restoreTreeRearrangeParsimony(tr, pr, perSiteScores);
-                    randomMP = tr->bestParsimony;
-                }
-                
-                if (haveBetterGlobal) {
-                    tr->coolingTimes = 100;
-                    tr->temperature = tr->startTemp;
-                }
-
-                
-            }
-        } while (randomMP < startMP);
-
-        tr->coolingTimes++;
-        if (tr->coolingTimes == 1 || tr->coolingTimes % 100 == 1) {
-            decreaseTemp(tr, 100);
-        }
-        
-        // Reverse to best tree topology
-        pllNewickTree *tmpTree = pllNewickParseString(tr->best_tree_string);
-        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
-        pllNewickParseDestroy(&tmpTree);
-
-        if (tr->bestParsimony < iqtree->globalScore) {
-            iqtree->cntItersNotImproved = 0;
-            iqtree->globalScore = tr->bestParsimony;
-        }
-        return tr->bestParsimony;
-    } else {
-        do {
-            startMP = randomMP;
-            nodeRectifierPars(tr);
-            tr->cnt_tree = 0;
-            for (i = 1; i <= tr->mxtips + tr->mxtips - 2; i++) {
-                //		for(j = 1; j <= tr->mxtips + tr->mxtips - 2; j++){
-                //			i = perm[j];
-                tr->insertNode = NULL;
-                tr->removeNode = NULL;
-                bestTreeScoreHits = 1;
-
-                rearrangeParsimony(tr, pr, tr->nodep[i], mintrav, maxtrav,
-                               PLL_FALSE, perSiteScores);
+            } else {
                 if (tr->bestParsimony == randomMP)
                     bestIterationScoreHits++;
                 if (tr->bestParsimony < randomMP)
@@ -3533,9 +3430,22 @@ int pllOptimizeSprParsimony(pllInstance *tr, partitionList *pr, int mintrav,
                     randomMP = tr->bestParsimony;
                 }
             }
-        } while (randomMP < startMP);
+        }
+    } while (randomMP < startMP);
+
+    if (tr->usingSA) {
+        tr->coolingTimes++;
+        if (tr->coolingTimes % 100 == 1) {
+            decreaseTemp(tr, 100);
+        }
+        
+        // Reverse to best tree topology
+        pllNewickTree *tmpTree = pllNewickParseString(tr->best_tree_string);
+        pllTreeInitTopologyNewick(tr, tmpTree, PLL_TRUE);
+        pllNewickParseDestroy(&tmpTree);
     }
-    return startMP;
+         
+    return tr->bestParsimony;
 }
 
 int pllOptimizeSprParsimonyMix(pllInstance *tr, partitionList *pr, int mintrav,

@@ -881,11 +881,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
     params.write_local_optimal_trees = false;
-    params.coolingSchedule = LINEAR_ADDITIVE_COOLING;
-    params.start_temp = 0.025;
-    params.final_temp = 0.0025;
-    params.plusSA = false;
+    params.coolingSchedule = EXPONENTIAL_MULTIPLICATIVE_COOLING;
+    params.start_temp = -1.0;
+    params.final_temp = -1.0;
     params.pureSA = false;
+    params.printAcceptTree = false;
     params.sampars = false;
     params.lvb = false;
 
@@ -1337,13 +1337,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.coolingSchedule = static_cast<CoolingSchedule>((unsigned)convert_int(argv[cnt]));
                 continue;
             }
-            if (strcmp(argv[cnt], "-cooling_times") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -cooling_times <cooling_times>";
-                params.maxCoolingTimes = (unsigned)convert_int(argv[cnt]);
-                continue;
-            }
+
             if (strcmp(argv[cnt], "-start_temp") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1351,6 +1345,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.start_temp = (double)convert_double(argv[cnt]);
                 continue;
             }
+
             if (strcmp(argv[cnt], "-final_temp") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1358,13 +1353,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.final_temp = (double)convert_double(argv[cnt]);
                 continue;
             }
-            if (strcmp(argv[cnt], "-accept_rate") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -accept_rate <accept_rate>";
-                params.acceptProbility = (unsigned)convert_double(argv[cnt]);
-                continue;
-            }
+
             if (strcmp(argv[cnt], "-pdgain") == 0) {
                 params.calc_pdgain = true;
                 continue;
@@ -2585,16 +2574,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.maximum_parsimony = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "-plus_sa") == 0) {
-                params.plusSA = true;
-                continue;
-            }
-            if (strcmp(argv[cnt], "-auto_sa") == 0) {
-                params.autoSA = true;
-                continue;
-            }
+
             if (strcmp(argv[cnt], "-pure_sa") == 0) {
                 params.pureSA = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-print_sa") == 0) {
+                params.printAcceptTree = true;
                 continue;
             }
 

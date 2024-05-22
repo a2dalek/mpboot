@@ -981,13 +981,11 @@ struct Params {
     unsigned int ran_seed;
 
     CoolingSchedule coolingSchedule;
-    int maxCoolingTimes;
     double start_temp;
     double final_temp;
     double acceptProbility;
-    bool plusSA;
     bool pureSA;
-    bool autoSA;
+    bool printAcceptTree;
     bool sampars;
     bool lvb;
     int hamming_score;
